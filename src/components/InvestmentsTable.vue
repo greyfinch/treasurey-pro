@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { formatCurrency, formatDate, formatPercentage } from '../utils/dateHelpers'
 import { calculateInvestmentROI } from '../utils/roi'
-import dayjs from 'dayjs'
 
 const props = defineProps<{
   investments: any[]

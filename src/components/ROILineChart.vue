@@ -9,7 +9,8 @@ import {
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
+  type ChartOptions
 } from 'chart.js'
 import { Line } from 'vue-chartjs'
 import dayjs from 'dayjs'
@@ -75,7 +76,7 @@ const chartData = computed(() => {
   }
 })
 
-const options = {
+const options: ChartOptions<'line'> = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {

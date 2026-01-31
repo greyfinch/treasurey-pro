@@ -16,8 +16,8 @@ const generateInvestments = () => {
     // 1. Active High Yield Investment
     investments.push({
         id: uuidv4(),
-        bankId: BANKS[0].id,
-        bank: BANKS[0],
+        bankId: BANKS[0]!.id,
+        bank: BANKS[0]!,
         principal: '50000000', // 50M
         dailyRate: '0.00045', // ~16.4% APY
         startDate: dayjs().subtract(45, 'day').toDate(),
@@ -30,8 +30,8 @@ const generateInvestments = () => {
     // 2. Matured Investment
     investments.push({
         id: uuidv4(),
-        bankId: BANKS[1].id,
-        bank: BANKS[1],
+        bankId: BANKS[1]!.id,
+        bank: BANKS[1]!,
         principal: '25000000', // 25M
         dailyRate: '0.00035',
         startDate: dayjs().subtract(400, 'day').toDate(),
@@ -44,8 +44,8 @@ const generateInvestments = () => {
     // 3. Active Investment with Withdrawals
     investments.push({
         id: uuidv4(),
-        bankId: BANKS[2].id,
-        bank: BANKS[2],
+        bankId: BANKS[2]!.id,
+        bank: BANKS[2]!,
         principal: '100000000', // 100M
         dailyRate: '0.0005', // ~18.25% APY
         startDate: dayjs().subtract(90, 'day').toDate(),
@@ -163,8 +163,9 @@ export const mockService = {
                     reject('Bank not found');
                     return;
                 }
-                BANKS[index] = { ...BANKS[index], ...bank };
-                resolve(BANKS[index]);
+                const updatedBank = { ...BANKS[index]!, ...bank };
+                BANKS[index] = updatedBank;
+                resolve(updatedBank);
             }, 500);
         });
     },
