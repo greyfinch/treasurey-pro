@@ -1,17 +1,25 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { BuildingLibraryIcon } from '@heroicons/vue/24/solid'
 import { Bars3Icon, XMarkIcon } from '@heroicons/vue/24/outline'
 
 const router = useRouter()
+const route = useRoute()
 const isMobileMenuOpen = ref(false)
+
+const isLoginPage = computed(() => route.name === 'Login')
+
+const handleLogout = () => {
+  localStorage.removeItem('isAuthenticated')
+  router.push('/login')
+}
 </script>
 
 <template>
   <div class="min-h-screen bg-white font-sans text-gray-900 dark:text-gray-100">
     <!-- Navbar -->
-    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <nav v-if="!isLoginPage" class="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
           <div class="flex">
@@ -58,8 +66,11 @@ const isMobileMenuOpen = ref(false)
                 <XMarkIcon v-else class="block h-6 w-6" aria-hidden="true" />
               </button>
             </div>
-            <button class="bg-primary-50 text-primary-700 px-3 py-1.5 rounded-full text-xs font-semibold border border-primary-200 hidden sm:block">
-                User Admin
+            <button 
+              @click="handleLogout"
+              class="bg-red-50 text-red-700 px-3 py-1.5 rounded-full text-xs font-semibold border border-red-200 hover:bg-red-100 transition-colors hidden sm:block"
+            >
+                Logout
             </button>
           </div>
         </div>
@@ -93,8 +104,11 @@ const isMobileMenuOpen = ref(false)
             Banks
           </router-link>
           <div class="mt-4 pt-4 border-t border-gray-200 pl-3">
-             <button class="bg-primary-50 text-primary-700 px-3 py-1.5 rounded-full text-xs font-semibold border border-primary-200">
-                User Admin
+             <button 
+               @click="handleLogout"
+               class="bg-red-50 text-red-700 px-3 py-1.5 rounded-full text-xs font-semibold border border-red-200 hover:bg-red-100 transition-colors"
+             >
+                Logout
             </button>
           </div>
         </div>
