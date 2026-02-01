@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { TrashIcon } from '@heroicons/vue/24/outline'
 import { formatCurrency, formatDate, formatPercentage } from '../utils/dateHelpers'
 import { calculateInvestmentROI } from '../utils/roi'
 
 const props = defineProps<{
   investments: any[]
   targetDate: Date
+}>()
+
+const emit = defineEmits<{
+  terminate: [id: string]
 }>()
 
 const router = useRouter()
@@ -43,6 +48,11 @@ const getStatusColor = (status: string) => {
 const navigateToDetail = (id: string) => {
   router.push(`/investments/${id}`)
 }
+
+const handleTerminate = (event: Event, id: string) => {
+  event.stopPropagation()
+  emit('terminate', id)
+}
 </script>
 
 <template>
@@ -56,6 +66,7 @@ const navigateToDetail = (id: string) => {
            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Accrued ROI</th>
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dates</th>
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
         </tr>
       </thead>
       <tbody class="bg-white divide-y divide-gray-200">
@@ -96,6 +107,17 @@ const navigateToDetail = (id: string) => {
             <span :class="['px-2 inline-flex text-xs leading-5 font-semibold rounded-full', getStatusColor(inv.status)]">
               {{ inv.status }}
             </span>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+            <button
+              v-if="inv.status === 'ACTIVE'"
+              @click="handleTerminate($event, inv.id)"
+              class="text-red-600 hover:text-red-900 p-2 rounded-lg hover:bg-red-50 transition-colors"
+              title="Terminate Investment"
+            >
+              <TrashIcon class="h-5 w-5" />
+            </button>
+            <span v-else class="text-gray-400 text-xs">N/A</span>
           </td>
         </tr>
       </tbody>

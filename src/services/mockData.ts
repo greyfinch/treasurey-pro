@@ -12,53 +12,87 @@ let BANKS = [
 
 const generateInvestments = () => {
     const investments: any[] = [];
+    const today = dayjs();
 
-    // 1. Active High Yield Investment
+    // 1. Active High Yield Investment (Started 45 days ago, 30-day duration)
+    const inv1StartDate = today.subtract(45, 'day');
     investments.push({
         id: uuidv4(),
         bankId: BANKS[0]!.id,
         bank: BANKS[0]!,
         principal: '50000000', // 50M
         dailyRate: '0.00045', // ~16.4% APY
-        startDate: dayjs().subtract(45, 'day').toDate(),
-        maturityDate: dayjs().add(320, 'day').toDate(),
+        startDate: inv1StartDate.toDate(),
+        maturityDate: inv1StartDate.add(30, 'day').toDate(), // 30 days duration
         status: 'ACTIVE',
         withdrawals: [],
         rollovers: []
     });
 
-    // 2. Matured Investment
+    // 2. Matured Investment (Started 60 days ago, 30-day duration, already matured)
+    const inv2StartDate = today.subtract(60, 'day');
     investments.push({
         id: uuidv4(),
         bankId: BANKS[1]!.id,
         bank: BANKS[1]!,
         principal: '25000000', // 25M
         dailyRate: '0.00035',
-        startDate: dayjs().subtract(400, 'day').toDate(),
-        maturityDate: dayjs().subtract(35, 'day').toDate(),
+        startDate: inv2StartDate.toDate(),
+        maturityDate: inv2StartDate.add(30, 'day').toDate(), // 30 days duration, already matured
         status: 'MATURED',
         withdrawals: [],
         rollovers: []
     });
 
-    // 3. Active Investment with Withdrawals
+    // 3. Active Investment with Withdrawals (Started 20 days ago, 30-day duration)
+    const inv3StartDate = today.subtract(20, 'day');
     investments.push({
         id: uuidv4(),
         bankId: BANKS[2]!.id,
         bank: BANKS[2]!,
         principal: '100000000', // 100M
         dailyRate: '0.0005', // ~18.25% APY
-        startDate: dayjs().subtract(90, 'day').toDate(),
-        maturityDate: dayjs().add(275, 'day').toDate(),
+        startDate: inv3StartDate.toDate(),
+        maturityDate: inv3StartDate.add(30, 'day').toDate(), // 30 days duration
         status: 'ACTIVE',
         withdrawals: [
             {
                 id: uuidv4(),
                 amount: '10000000',
-                withdrawalDate: dayjs().subtract(30, 'day').toDate(),
+                withdrawalDate: today.subtract(10, 'day').toDate(),
                 fee: '10000'
             }
         ],
+        rollovers: []
+    });
+
+    // 4. Short-term Active Investment (Started 15 days ago, 30-day duration)
+    const inv4StartDate = today.subtract(15, 'day');
+    investments.push({
+        id: uuidv4(),
+        bankId: BANKS[3]!.id,
+        bank: BANKS[3]!,
+        principal: '30000000', // 30M
+        dailyRate: '0.0004',
+        startDate: inv4StartDate.toDate(),
+        maturityDate: inv4StartDate.add(30, 'day').toDate(), // 30 days duration
+        status: 'ACTIVE',
+        withdrawals: [],
+        rollovers: []
+    });
+
+    // 5. Recent Active Investment (Started 5 days ago, 30-day duration)
+    const inv5StartDate = today.subtract(5, 'day');
+    investments.push({
+        id: uuidv4(),
+        bankId: BANKS[4]!.id,
+        bank: BANKS[4]!,
+        principal: '75000000', // 75M
+        dailyRate: '0.00038',
+        startDate: inv5StartDate.toDate(),
+        maturityDate: inv5StartDate.add(30, 'day').toDate(), // 30 days duration
+        status: 'ACTIVE',
+        withdrawals: [],
         rollovers: []
     });
 
@@ -137,6 +171,20 @@ export const mockService = {
                 };
                 inv.rollovers.push(newRollover);
                 resolve(newRollover);
+            }, 500);
+        });
+    },
+
+    terminateInvestment: async (investmentId: string): Promise<any> => {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                const inv = MOCK_INVESTMENTS.find((i: any) => i.id === investmentId);
+                if (!inv) {
+                    reject('Investment not found');
+                    return;
+                }
+                inv.status = 'TERMINATED';
+                resolve(inv);
             }, 500);
         });
     },
