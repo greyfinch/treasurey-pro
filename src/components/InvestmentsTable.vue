@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { TrashIcon } from '@heroicons/vue/24/outline'
 import { formatCurrency, formatDate, formatPercentage } from '../utils/dateHelpers'
 import { calculateInvestmentROI } from '../utils/roi'
+import dayjs from 'dayjs'
 
 const props = defineProps<{
   investments: any[]
@@ -16,11 +17,19 @@ const emit = defineEmits<{
 
 const router = useRouter()
 
+const getDisplayStatus = (investment: any) => {
+  const isMatured = dayjs(investment.maturityDate).isBefore(dayjs(), 'day')
+  if (investment.status === 'ACTIVE' && isMatured) return 'MATURED'
+  return investment.status
+}
+
 const sortedInvestments = computed(() => {
   return [...props.investments].sort((a, b) => {
     // Sort by status (Active first) then by maturity date
-    if (a.status === 'ACTIVE' && b.status !== 'ACTIVE') return -1
-    if (a.status !== 'ACTIVE' && b.status === 'ACTIVE') return 1
+    const statusA = getDisplayStatus(a)
+    const statusB = getDisplayStatus(b)
+    if (statusA === 'ACTIVE' && statusB !== 'ACTIVE') return -1
+    if (statusA !== 'ACTIVE' && statusB === 'ACTIVE') return 1
     return new Date(a.maturityDate).getTime() - new Date(b.maturityDate).getTime()
   })
 })
@@ -104,13 +113,13 @@ const handleTerminate = (event: Event, id: string) => {
             <div><span class="text-xs text-gray-400">End:</span> {{ formatDate(inv.maturityDate) }}</div>
           </td>
           <td class="px-6 py-4 whitespace-nowrap">
-            <span :class="['px-2 inline-flex text-xs leading-5 font-semibold rounded-full', getStatusColor(inv.status)]">
-              {{ inv.status }}
+            <span :class="['px-2 inline-flex text-xs leading-5 font-semibold rounded-full', getStatusColor(getDisplayStatus(inv))]">
+              {{ getDisplayStatus(inv) }}
             </span>
           </td>
           <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
             <button
-              v-if="inv.status === 'ACTIVE'"
+              v-if="getDisplayStatus(inv) === 'ACTIVE'"
               @click="handleTerminate($event, inv.id)"
               class="text-red-600 hover:text-red-900 p-2 rounded-lg hover:bg-red-50 transition-colors"
               title="Terminate Investment"

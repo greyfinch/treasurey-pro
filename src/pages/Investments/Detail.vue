@@ -35,6 +35,7 @@ const showSimulator = ref(true)
 const simulatorPrincipal = ref('')
 const simulatorRate = ref('')
 const simulatorDays = ref(60)
+const showFullProjection = ref(false)
 
 onMounted(async () => {
     try {
@@ -94,7 +95,7 @@ const simulatedResults = computed(() => {
         return {
             totalInterest: 0,
             finalBalance: 0,
-            effectiveAPY: 0,
+            effectiveMPY: 0,
             dailyBreakdown: []
         }
     }
@@ -122,13 +123,13 @@ const simulatedResults = computed(() => {
         })
     }
 
-    // Calculate effective APY
-    const effectiveAPY = (Math.pow(1 + dailyRate, 365) - 1) * 100
+    // Calculate effective MPY (monthly percentage yield)
+    const effectiveMPY = (Math.pow(1 + dailyRate, 30) - 1) * 100
 
     return {
         totalInterest,
         finalBalance: runningBalance,
-        effectiveAPY,
+        effectiveMPY,
         dailyBreakdown
     }
 })
@@ -148,6 +149,18 @@ const comparisonMetrics = computed(() => {
         percentDiff,
         isHigher: simRate > currentRate
     }
+})
+
+const projectionPreview = computed(() => {
+    const breakdown = simulatedResults.value.dailyBreakdown
+    return showFullProjection.value ? breakdown : breakdown.slice(0, 7)
+})
+
+const displayStatus = computed(() => {
+    if (!investment.value) return ''
+    const isMatured = dayjs(investment.value.maturityDate).isBefore(dayjs(), 'day')
+    if (investment.value.status === 'ACTIVE' && isMatured) return 'MATURED'
+    return investment.value.status
 })
 
 // Actions
@@ -253,10 +266,11 @@ const handleTerminate = async () => {
                     </button>
                      <span :class="[
                         'px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wide',
-                        investment.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 
-                        investment.status === 'TERMINATED' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+                        displayStatus === 'ACTIVE' ? 'bg-green-100 text-green-800' : 
+                        displayStatus === 'MATURED' ? 'bg-blue-100 text-blue-800' :
+                        displayStatus === 'TERMINATED' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
                     ]">
-                        {{ investment.status }}
+                        {{ displayStatus }}
                     </span>
                 </div>
             </div>
@@ -339,14 +353,14 @@ const handleTerminate = async () => {
                     </div>
                     
                     <div class="mb-6">
-                        <h3 class="font-bold text-2xl text-indigo-900 mb-2">ROI Forecast Simulator</h3>
-                        <p class="text-sm text-indigo-700">Run "what-if" scenarios to plan your investment strategy</p>
+                        <h3 class="font-bold text-xl sm:text-2xl text-indigo-900 mb-2">ROI Forecast Simulator</h3>
+                        <p class="text-xs sm:text-sm text-indigo-700">Run "what-if" scenarios to plan your investment strategy</p>
                     </div>
 
                     <!-- Input Controls -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                         <div>
-                            <label class="block text-sm font-semibold text-indigo-900 mb-2">Principal Amount</label>
+                            <label class="block text-xs sm:text-sm font-semibold text-indigo-900 mb-2">Principal Amount</label>
                             <div class="relative">
                                 <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₦</span>
                                 <input 
@@ -358,7 +372,7 @@ const handleTerminate = async () => {
                             </div>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-indigo-900 mb-2">Daily Interest Rate (%)</label>
+                            <label class="block text-xs sm:text-sm font-semibold text-indigo-900 mb-2">Daily Interest Rate (%)</label>
                             <input 
                                 type="number" 
                                 step="0.001"
@@ -368,7 +382,7 @@ const handleTerminate = async () => {
                             >
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-indigo-900 mb-2">Duration (Days)</label>
+                            <label class="block text-xs sm:text-sm font-semibold text-indigo-900 mb-2">Duration (Days)</label>
                             <input 
                                 type="number" 
                                 v-model="simulatorDays"
@@ -380,7 +394,7 @@ const handleTerminate = async () => {
 
                     <!-- Quick Presets -->
                     <div class="flex gap-2 mb-6 flex-wrap">
-                        <span class="text-sm font-medium text-indigo-900">Quick Presets:</span>
+                        <span class="text-xs sm:text-sm font-medium text-indigo-900">Quick Presets:</span>
                         <button @click="simulatorDays = 30" class="px-3 py-1 bg-white hover:bg-indigo-100 border border-indigo-300 rounded-full text-xs font-medium text-indigo-700 transition-colors">30 Days</button>
                         <button @click="simulatorDays = 60" class="px-3 py-1 bg-white hover:bg-indigo-100 border border-indigo-300 rounded-full text-xs font-medium text-indigo-700 transition-colors">60 Days</button>
                         <button @click="simulatorDays = 90" class="px-3 py-1 bg-white hover:bg-indigo-100 border border-indigo-300 rounded-full text-xs font-medium text-indigo-700 transition-colors">90 Days</button>
@@ -399,33 +413,33 @@ const handleTerminate = async () => {
                     <!-- Results Display -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                         <div class="bg-white p-6 rounded-xl shadow-lg border-2 border-indigo-100">
-                            <p class="text-xs text-gray-500 mb-1 uppercase tracking-wide">Projected Interest</p>
-                            <p class="text-3xl font-black text-green-600">{{ formatCurrency(simulatedResults.totalInterest) }}</p>
-                            <p class="text-xs text-gray-400 mt-2">Over {{ simulatorDays }} days</p>
+                            <p class="text-[10px] sm:text-xs text-gray-500 mb-1 uppercase tracking-wide">Projected Interest</p>
+                            <p class="text-2xl sm:text-3xl font-black text-green-600">{{ formatCurrency(simulatedResults.totalInterest) }}</p>
+                            <p class="text-[10px] sm:text-xs text-gray-400 mt-2">Over {{ simulatorDays }} days</p>
                         </div>
                         <div class="bg-white p-6 rounded-xl shadow-lg border-2 border-indigo-100">
-                            <p class="text-xs text-gray-500 mb-1 uppercase tracking-wide">Final Balance</p>
-                            <p class="text-3xl font-black text-indigo-900">{{ formatCurrency(simulatedResults.finalBalance) }}</p>
-                            <p class="text-xs text-gray-400 mt-2">Principal + Interest</p>
+                            <p class="text-[10px] sm:text-xs text-gray-500 mb-1 uppercase tracking-wide">Final Balance</p>
+                            <p class="text-2xl sm:text-3xl font-black text-indigo-900">{{ formatCurrency(simulatedResults.finalBalance) }}</p>
+                            <p class="text-[10px] sm:text-xs text-gray-400 mt-2">Principal + Interest</p>
                         </div>
                         <div class="bg-white p-6 rounded-xl shadow-lg border-2 border-indigo-100">
-                            <p class="text-xs text-gray-500 mb-1 uppercase tracking-wide">Effective APY</p>
-                            <p class="text-3xl font-black text-purple-600">{{ simulatedResults.effectiveAPY.toFixed(2) }}%</p>
-                            <p class="text-xs text-gray-400 mt-2">Annual rate</p>
+                            <p class="text-[10px] sm:text-xs text-gray-500 mb-1 uppercase tracking-wide">Effective MPY</p>
+                            <p class="text-2xl sm:text-3xl font-black text-purple-600">{{ simulatedResults.effectiveMPY.toFixed(2) }}%</p>
+                            <p class="text-[10px] sm:text-xs text-gray-400 mt-2">Monthly rate</p>
                         </div>
                     </div>
 
                     <!-- Comparison Metrics -->
                     <div v-if="comparisonMetrics" class="bg-white/80 backdrop-blur-sm p-4 rounded-lg border border-indigo-200 mb-6">
                         <div class="flex items-center justify-between">
-                            <span class="text-sm text-gray-700">
+                            <span class="text-xs sm:text-sm text-gray-700">
                                 Simulated rate ({{ comparisonMetrics.simRate.toFixed(3) }}%) is 
                                 <span :class="comparisonMetrics.isHigher ? 'text-green-600 font-bold' : 'text-red-600 font-bold'">
                                     {{ comparisonMetrics.isHigher ? 'higher' : 'lower' }}
                                 </span>
                                 than current ({{ comparisonMetrics.currentRate.toFixed(3) }}%)
                             </span>
-                            <span class="text-lg font-bold" :class="comparisonMetrics.isHigher ? 'text-green-600' : 'text-red-600'">
+                            <span class="text-base sm:text-lg font-bold" :class="comparisonMetrics.isHigher ? 'text-green-600' : 'text-red-600'">
                                 {{ comparisonMetrics.isHigher ? '+' : '' }}{{ comparisonMetrics.percentDiff.toFixed(1) }}%
                             </span>
                         </div>
@@ -433,7 +447,7 @@ const handleTerminate = async () => {
 
                     <!-- Daily Projection Preview (First 7 days) -->
                     <div class="bg-white rounded-lg p-4 border border-indigo-200">
-                        <h4 class="font-semibold text-indigo-900 mb-3">Projection Preview (First 7 Days)</h4>
+                        <h4 class="font-semibold text-sm sm:text-base text-indigo-900 mb-3">Projection Preview (First 7 Days)</h4>
                         <div class="overflow-x-auto">
                             <table class="min-w-full text-sm">
                                 <thead class="border-b border-indigo-100">
@@ -445,7 +459,7 @@ const handleTerminate = async () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="day in simulatedResults.dailyBreakdown.slice(0, 7)" :key="day.day" class="border-b border-gray-50">
+                                    <tr v-for="day in projectionPreview" :key="day.day" class="border-b border-gray-50">
                                         <td class="py-2 text-gray-700">{{ day.day }}</td>
                                         <td class="py-2 text-gray-600">{{ day.date }}</td>
                                         <td class="py-2 text-right font-medium text-green-600">{{ formatCurrency(day.interest) }}</td>
@@ -454,8 +468,18 @@ const handleTerminate = async () => {
                                 </tbody>
                             </table>
                         </div>
-                        <p class="text-xs text-gray-500 mt-3 text-center">
-                            {{ simulatedResults.dailyBreakdown.length > 7 ? `+ ${simulatedResults.dailyBreakdown.length - 7} more days` : '' }}
+                        <p class="text-[10px] sm:text-xs text-gray-500 mt-3 text-center">
+                            <button
+                                v-if="simulatedResults.dailyBreakdown.length > 7"
+                                type="button"
+                                @click="showFullProjection = !showFullProjection"
+                                class="text-indigo-600 hover:text-indigo-800 font-medium text-[10px] sm:text-xs"
+                            >
+                                {{ showFullProjection
+                                    ? 'Show fewer days'
+                                    : `+ ${simulatedResults.dailyBreakdown.length - 7} more days`
+                                }}
+                            </button>
                         </p>
                     </div>
                 </div>

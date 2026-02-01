@@ -54,10 +54,16 @@ const fetchData = async () => {
     }
 }
 
+const getDisplayStatus = (inv: any) => {
+    const isMatured = dayjs(inv.maturityDate).isBefore(dayjs(), 'day')
+    if (inv.status === 'ACTIVE' && isMatured) return 'MATURED'
+    return inv.status
+}
+
 const filteredInvestments = computed(() => {
     return investments.value.filter(inv => {
         const matchBank = !selectedBankId.value || inv.bankId === selectedBankId.value
-        const matchStatus = !selectedStatus.value || inv.status === selectedStatus.value
+        const matchStatus = !selectedStatus.value || getDisplayStatus(inv) === selectedStatus.value
         return matchBank && matchStatus
     })
 })
