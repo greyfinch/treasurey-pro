@@ -30,12 +30,21 @@ const rolloverForm = ref({
 })
 const targetDate = ref(new Date())
 
+// ROI Forecast Simulator
+const showSimulator = ref(true)
+const simulatorPrincipal = ref('')
+const simulatorRate = ref('')
+const simulatorDays = ref(60)
+
 onMounted(async () => {
     try {
         const id = route.params.id as string
         const data = await mockService.getInvestmentById(id)
         if (data) {
             investment.value = data
+            // Initialize simulator with current investment values
+            simulatorPrincipal.value = data.principal
+            simulatorRate.value = (parseFloat(data.dailyRate) * 100).toFixed(3) // Convert to percentage
         } else {
             router.push('/')
         }
@@ -77,6 +86,68 @@ const dailyBreakdown = computed(() => {
         startDate: dayjs(targetDate.value).subtract(30, 'day').toDate(),
         endDate: targetDate.value
     })
+})
+
+// Simulator Computeds
+const simulatedResults = computed(() => {
+    if (!simulatorPrincipal.value || !simulatorRate.value || !simulatorDays.value) {
+        return {
+            totalInterest: 0,
+            finalBalance: 0,
+            effectiveAPY: 0,
+            dailyBreakdown: []
+        }
+    }
+
+    const principal = parseFloat(simulatorPrincipal.value)
+    const dailyRate = parseFloat(simulatorRate.value) / 100 // Convert percentage to decimal
+    const days = parseInt(simulatorDays.value.toString())
+
+    // Calculate day-by-day projection
+    const dailyBreakdown: Array<{ day: number; date: string; principal: number; interest: number; balance: number }> = []
+    let runningBalance = principal
+    let totalInterest = 0
+
+    for (let i = 1; i <= days; i++) {
+        const dayInterest = runningBalance * dailyRate
+        totalInterest += dayInterest
+        runningBalance += dayInterest
+        
+        dailyBreakdown.push({
+            day: i,
+            date: dayjs().add(i, 'day').format('MMM D, YYYY'),
+            principal: principal,
+            interest: dayInterest,
+            balance: runningBalance
+        })
+    }
+
+    // Calculate effective APY
+    const effectiveAPY = (Math.pow(1 + dailyRate, 365) - 1) * 100
+
+    return {
+        totalInterest,
+        finalBalance: runningBalance,
+        effectiveAPY,
+        dailyBreakdown
+    }
+})
+
+const comparisonMetrics = computed(() => {
+    if (!investment.value || !simulatorRate.value) return null
+    
+    const currentRate = parseFloat(investment.value.dailyRate) * 100
+    const simRate = parseFloat(simulatorRate.value)
+    const rateDiff = simRate - currentRate
+    const percentDiff = (rateDiff / currentRate) * 100
+
+    return {
+        currentRate,
+        simRate,
+        rateDiff,
+        percentDiff,
+        isHigher: simRate > currentRate
+    }
 })
 
 // Actions
@@ -257,6 +328,135 @@ const handleTerminate = async () => {
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- ROI Forecast Simulator -->
+                <div v-if="showSimulator" class="card bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 border-indigo-200 relative overflow-hidden">
+                    <!-- Premium Badge -->
+                    <div class="absolute top-4 right-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                        ⭐ PREMIUM
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h3 class="font-bold text-2xl text-indigo-900 mb-2">ROI Forecast Simulator</h3>
+                        <p class="text-sm text-indigo-700">Run "what-if" scenarios to plan your investment strategy</p>
+                    </div>
+
+                    <!-- Input Controls -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-indigo-900 mb-2">Principal Amount</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₦</span>
+                                <input 
+                                    type="number" 
+                                    v-model="simulatorPrincipal"
+                                    class="w-full text-gray-900 pl-8 pr-4 py-3 bg-white border-2 border-indigo-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                                    placeholder="Enter amount"
+                                >
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-indigo-900 mb-2">Daily Interest Rate (%)</label>
+                            <input 
+                                type="number" 
+                                step="0.001"
+                                v-model="simulatorRate"
+                                class="w-full text-gray-900 px-4 py-3 bg-white border-2 border-indigo-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                                placeholder="0.045"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-indigo-900 mb-2">Duration (Days)</label>
+                            <input 
+                                type="number" 
+                                v-model="simulatorDays"
+                                class="w-full text-gray-900 px-4 py-3 bg-white border-2 border-indigo-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                                placeholder="60"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Quick Presets -->
+                    <div class="flex gap-2 mb-6 flex-wrap">
+                        <span class="text-sm font-medium text-indigo-900">Quick Presets:</span>
+                        <button @click="simulatorDays = 30" class="px-3 py-1 bg-white hover:bg-indigo-100 border border-indigo-300 rounded-full text-xs font-medium text-indigo-700 transition-colors">30 Days</button>
+                        <button @click="simulatorDays = 60" class="px-3 py-1 bg-white hover:bg-indigo-100 border border-indigo-300 rounded-full text-xs font-medium text-indigo-700 transition-colors">60 Days</button>
+                        <button @click="simulatorDays = 90" class="px-3 py-1 bg-white hover:bg-indigo-100 border border-indigo-300 rounded-full text-xs font-medium text-indigo-700 transition-colors">90 Days</button>
+                        <button 
+                            @click="() => { 
+                                simulatorPrincipal = investment.principal; 
+                                simulatorRate = (parseFloat(investment.dailyRate) * 100).toFixed(3);
+                                simulatorDays = 60;
+                            }"
+                            class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-xs font-medium transition-colors ml-2"
+                        >
+                            Reset to Current
+                        </button>
+                    </div>
+
+                    <!-- Results Display -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-white p-6 rounded-xl shadow-lg border-2 border-indigo-100">
+                            <p class="text-xs text-gray-500 mb-1 uppercase tracking-wide">Projected Interest</p>
+                            <p class="text-3xl font-black text-green-600">{{ formatCurrency(simulatedResults.totalInterest) }}</p>
+                            <p class="text-xs text-gray-400 mt-2">Over {{ simulatorDays }} days</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-lg border-2 border-indigo-100">
+                            <p class="text-xs text-gray-500 mb-1 uppercase tracking-wide">Final Balance</p>
+                            <p class="text-3xl font-black text-indigo-900">{{ formatCurrency(simulatedResults.finalBalance) }}</p>
+                            <p class="text-xs text-gray-400 mt-2">Principal + Interest</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-lg border-2 border-indigo-100">
+                            <p class="text-xs text-gray-500 mb-1 uppercase tracking-wide">Effective APY</p>
+                            <p class="text-3xl font-black text-purple-600">{{ simulatedResults.effectiveAPY.toFixed(2) }}%</p>
+                            <p class="text-xs text-gray-400 mt-2">Annual rate</p>
+                        </div>
+                    </div>
+
+                    <!-- Comparison Metrics -->
+                    <div v-if="comparisonMetrics" class="bg-white/80 backdrop-blur-sm p-4 rounded-lg border border-indigo-200 mb-6">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-700">
+                                Simulated rate ({{ comparisonMetrics.simRate.toFixed(3) }}%) is 
+                                <span :class="comparisonMetrics.isHigher ? 'text-green-600 font-bold' : 'text-red-600 font-bold'">
+                                    {{ comparisonMetrics.isHigher ? 'higher' : 'lower' }}
+                                </span>
+                                than current ({{ comparisonMetrics.currentRate.toFixed(3) }}%)
+                            </span>
+                            <span class="text-lg font-bold" :class="comparisonMetrics.isHigher ? 'text-green-600' : 'text-red-600'">
+                                {{ comparisonMetrics.isHigher ? '+' : '' }}{{ comparisonMetrics.percentDiff.toFixed(1) }}%
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Daily Projection Preview (First 7 days) -->
+                    <div class="bg-white rounded-lg p-4 border border-indigo-200">
+                        <h4 class="font-semibold text-indigo-900 mb-3">Projection Preview (First 7 Days)</h4>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm">
+                                <thead class="border-b border-indigo-100">
+                                    <tr>
+                                        <th class="text-left py-2 text-gray-600 font-medium">Day</th>
+                                        <th class="text-left py-2 text-gray-600 font-medium">Date</th>
+                                        <th class="text-right py-2 text-gray-600 font-medium">Daily Interest</th>
+                                        <th class="text-right py-2 text-gray-600 font-medium">Running Balance</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="day in simulatedResults.dailyBreakdown.slice(0, 7)" :key="day.day" class="border-b border-gray-50">
+                                        <td class="py-2 text-gray-700">{{ day.day }}</td>
+                                        <td class="py-2 text-gray-600">{{ day.date }}</td>
+                                        <td class="py-2 text-right font-medium text-green-600">{{ formatCurrency(day.interest) }}</td>
+                                        <td class="py-2 text-right font-bold text-indigo-900">{{ formatCurrency(day.balance) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-3 text-center">
+                            {{ simulatedResults.dailyBreakdown.length > 7 ? `+ ${simulatedResults.dailyBreakdown.length - 7} more days` : '' }}
+                        </p>
                     </div>
                 </div>
             </div>
