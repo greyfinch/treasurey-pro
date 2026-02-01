@@ -6,6 +6,8 @@ import InvestmentsTable from '../../components/InvestmentsTable.vue'
 import FilterPanel from '../../components/FilterPanel.vue'
 import BankFormModal from '../../components/BankFormModal.vue'
 import { mockService } from '../../services/mockData'
+import { formatCurrency } from '../../utils/dateHelpers'
+import { calculatePortfolioROI } from '../../utils/roi'
 
 const loading = ref(true)
 const investments = ref<any[]>([])
@@ -15,6 +17,7 @@ const targetDate = ref(new Date())
 // Filters
 const selectedBankId = ref('')
 const selectedStatus = ref('')
+const liquidDays = ref(7)
 
 // Modal
 const showModal = ref(false)
@@ -66,6 +69,53 @@ const filteredInvestments = computed(() => {
         const matchStatus = !selectedStatus.value || getDisplayStatus(inv) === selectedStatus.value
         return matchBank && matchStatus
     })
+})
+
+const totalPrincipal = computed(() => {
+    return investments.value.reduce((sum, inv) => sum + (Number(inv.principal) || 0), 0)
+})
+
+const totalAccruedROI = computed(() => {
+    return calculatePortfolioROI(investments.value, targetDate.value).toNumber()
+})
+
+const cashLockInMetrics = computed(() => {
+    const totalPrincipal = investments.value.reduce((sum, inv) => sum + (Number(inv.principal) || 0), 0)
+    const today = dayjs()
+    const daysAhead = Math.max(1, Number(liquidDays.value) || 1)
+    const nextWeekStart = today.add(1, 'day').startOf('day')
+    const nextWeekEnd = today.add(daysAhead, 'day').endOf('day')
+
+    const lockedPrincipal = investments.value.reduce((sum, inv) => {
+        const isLocked = inv.status === 'ACTIVE' && dayjs(inv.maturityDate).isAfter(today, 'day')
+        return sum + (isLocked ? Number(inv.principal) || 0 : 0)
+    }, 0)
+
+    const liquidNextWeek = investments.value.reduce(
+        (acc: { amount: number; count: number }, inv) => {
+            const maturity = dayjs(inv.maturityDate)
+            const isLiquidNextWeek = inv.status === 'ACTIVE' && maturity.isAfter(nextWeekStart) && maturity.isBefore(nextWeekEnd)
+            if (isLiquidNextWeek) {
+                acc.amount += Number(inv.principal) || 0
+                acc.count += 1
+            }
+            return acc
+        },
+        { amount: 0, count: 0 }
+    )
+
+    const lockedPercent = totalPrincipal ? (lockedPrincipal / totalPrincipal) * 100 : 0
+    const liquidPercent = totalPrincipal ? (liquidNextWeek.amount / totalPrincipal) * 100 : 0
+
+    return {
+        totalPrincipal,
+        lockedPrincipal,
+        lockedPercent,
+        liquidNextWeekAmount: liquidNextWeek.amount,
+        liquidNextWeekCount: liquidNextWeek.count,
+        liquidPercent,
+        daysAhead
+    }
 })
 
 const clearFilters = () => {
@@ -139,26 +189,88 @@ const confirmTerminate = async () => {
             </button>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <!-- Main List -->
-            <div class="lg:col-span-3">
-                <div class="card p-0 overflow-hidden">
-                    <InvestmentsTable 
-                        :investments="filteredInvestments"
-                        :target-date="targetDate"
-                        @terminate="handleTerminate"
-                    />
+        <div class="grid grid-cols-1 gap-6">
+            <!-- Portfolio Totals -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="card">
+                    <p class="text-xs text-white uppercase tracking-wide">Total Principal</p>
+                    <p class="text-2xl font-bold text-gray-100 mt-2">
+                        {{ formatCurrency(totalPrincipal) }}
+                    </p>
+                    <p class="text-[10px] text-gray-400 mt-1">Across all investments</p>
+                </div>
+                <div class="card">
+                    <p class="text-xs text-gray-500 uppercase tracking-wide">Total Accrued ROI</p>
+                    <p class="text-2xl font-bold text-money-600 mt-2">
+                        {{ formatCurrency(totalAccruedROI) }}
+                    </p>
+                    <p class="text-[10px] text-gray-400 mt-1">Portfolio to date</p>
                 </div>
             </div>
+            <!-- Cash Lock-in -->
+            <div class="card">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-white">Cash Lock-in</h2>
+                        <p class="text-xs text-gray-100">Liquidity outlook based on maturity dates</p>
+                    </div>
+                    <span class="text-[10px] uppercase tracking-wider text-gray-400">Today & Next {{ cashLockInMetrics.daysAhead }} Days</span>
+                </div>
 
-            <!-- Filters -->
-            <div class="lg:col-span-1">
-                <FilterPanel 
-                    :banks="banks"
-                    v-model:selected-bank-id="selectedBankId"
-                    v-model:selected-status="selectedStatus"
-                    @clear="clearFilters"
-                />
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="rounded-lg border border-gray-100 p-4 bg-white">
+                        <p class="text-[11px] text-gray-500 uppercase tracking-wide">Locked today</p>
+                        <p class="text-2xl font-bold text-indigo-900">
+                            {{ cashLockInMetrics.lockedPercent.toFixed(1) }}%
+                        </p>
+                        <p class="text-xs text-gray-400 mt-1">
+                            {{ formatCurrency(cashLockInMetrics.lockedPrincipal) }} of {{ formatCurrency(cashLockInMetrics.totalPrincipal) }}
+                        </p>
+                    </div>
+                    <div class="rounded-lg border border-gray-100 p-4 bg-white">
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="text-[11px] text-gray-500 uppercase tracking-wide">Becomes liquid in</p>
+                            <div class="flex items-center gap-2">
+                                <input
+                                    v-model.number="liquidDays"
+                                    type="number"
+                                    min="1"
+                                    class="w-16 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-700"
+                                >
+                                <span class="text-[11px] text-gray-500">days</span>
+                            </div>
+                        </div>
+                        <p class="text-2xl font-bold text-green-700">
+                            {{ formatCurrency(cashLockInMetrics.liquidNextWeekAmount) }}
+                        </p>
+                        <p class="text-xs text-gray-400 mt-1">
+                            {{ cashLockInMetrics.liquidPercent.toFixed(1) }}% of portfolio • {{ cashLockInMetrics.liquidNextWeekCount }} investments
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <!-- Main List -->
+                <div class="lg:col-span-3 space-y-4">
+                     <!-- Filters -->
+                    <div class="card p-0 overflow-hidden">
+                        <InvestmentsTable 
+                            :investments="filteredInvestments"
+                            :target-date="targetDate"
+                            @terminate="handleTerminate"
+                        />
+                    </div>
+                </div>
+    
+                <!-- Filters -->
+                <div class="lg:col-span-1">
+                    <FilterPanel 
+                        :banks="banks"
+                        v-model:selected-bank-id="selectedBankId"
+                        v-model:selected-status="selectedStatus"
+                        @clear="clearFilters"
+                    />
+                </div>
             </div>
         </div>
 

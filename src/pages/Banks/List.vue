@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { PlusIcon, PencilSquareIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import { mockService } from '../../services/mockData'
 import BankFormModal from '../../components/BankFormModal.vue'
@@ -7,6 +7,7 @@ import InvestmentsTable from '../../components/InvestmentsTable.vue'
 
 const loading = ref(true)
 const banks = ref<any[]>([])
+const investments = ref<any[]>([])
 const showModal = ref(false)
 const showInvestmentsModal = ref(false)
 const selectedBankName = ref('')
@@ -14,12 +15,17 @@ const selectedBankInvestments = ref<any[]>([])
 const editingBank = ref<any>(null)
 
 onMounted(async () => {
-    await fetchBanks()
+    await fetchData()
 })
 
-const fetchBanks = async () => {
+const fetchData = async () => {
     try {
-        banks.value = await mockService.getBanks()
+        const [bankData, investmentData] = await Promise.all([
+            mockService.getBanks(),
+            mockService.getInvestments()
+        ])
+        banks.value = bankData
+        investments.value = investmentData
     } finally {
         loading.value = false
     }
@@ -46,7 +52,7 @@ const openEditModal = (bank: any) => {
 }
 
 const handleSaved = async () => {
-    await fetchBanks()
+    await fetchData()
     // Modal closes itself via close event which sets showModal = false
 }
 
@@ -54,11 +60,51 @@ const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this bank? This might affect existing investments.')) return
     try {
         await mockService.deleteBank(id)
-        await fetchBanks()
+        await fetchData()
     } catch (e) {
         alert('Failed to delete bank')
     }
 }
+
+const bankPerformanceRanking = computed(() => {
+    const bankRows = banks.value.map(bank => {
+        const bankInvestments = investments.value.filter((inv: any) => inv.bankId === bank.id)
+        const activeInvestments = bankInvestments.filter((inv: any) => inv.status === 'ACTIVE')
+        const targetInvestments = activeInvestments.length ? activeInvestments : bankInvestments
+
+        if (!targetInvestments.length) {
+            return {
+                id: bank.id,
+                name: bank.name,
+                effectiveRate: 0
+            }
+        }
+
+        const totals = targetInvestments.reduce(
+            (acc: { weightedRateSum: number; principalSum: number }, inv: any) => {
+                const principal = Number(inv.principal) || 0
+                const dailyRate = Number(inv.dailyRate) || 0
+                const effectiveRate = (Math.pow(1 + dailyRate, 30) - 1) * 100
+                acc.weightedRateSum += effectiveRate * principal
+                acc.principalSum += principal
+                return acc
+            },
+            { weightedRateSum: 0, principalSum: 0 }
+        )
+
+        const effectiveRate = totals.principalSum
+            ? totals.weightedRateSum / totals.principalSum
+            : 0
+
+        return {
+            id: bank.id,
+            name: bank.name,
+            effectiveRate
+        }
+    })
+
+    return bankRows.sort((a, b) => b.effectiveRate - a.effectiveRate)
+})
 </script>
 
 <template>
@@ -115,6 +161,41 @@ const handleDelete = async (id: string) => {
                 </tbody>
             </table>
         </div>
+
+        <!-- Bank Performance Ranking -->
+        <div class="card bg-white p-4">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900">Bank Performance Ranking</h2>
+                    <p class="text-xs text-gray-500">Strategic view of effective monthly yield by bank (weighted by principal)</p>
+                </div>
+                <span class="text-[10px] uppercase tracking-wider text-gray-400">Effective Rate</span>
+            </div>
+
+            <div v-if="bankPerformanceRanking.length" class="space-y-2">
+                <div
+                    v-for="(bank, index) in bankPerformanceRanking"
+                    :key="bank.id"
+                    class="flex items-center justify-between rounded-lg border border-gray-500 px-4 py-3 hover:bg-gray-50"
+                >
+                    <div class="flex items-center gap-3">
+                        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary-50 text-primary-700 text-xs font-semibold">
+                            {{ index + 1 }}
+                        </span>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">{{ bank.name }}</p>
+                            <p class="text-[10px] text-gray-500">Performance ranking</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-semibold text-primary-700">{{ bank.effectiveRate.toFixed(1) }}%</p>
+                        <p class="text-[10px] text-gray-400">effective monthly</p>
+                    </div>
+                </div>
+            </div>
+            <div v-else class="text-sm text-gray-500">No performance data yet.</div>
+        </div>
+
 
         <!-- Reusable Modal Component -->
         <BankFormModal 

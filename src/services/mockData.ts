@@ -96,6 +96,87 @@ const generateInvestments = () => {
         rollovers: []
     });
 
+    // 6. Second Active Investment for Zenith (Started 12 days ago, 45-day duration)
+    const inv6StartDate = today.subtract(12, 'day');
+    investments.push({
+        id: uuidv4(),
+        bankId: BANKS[0]!.id,
+        bank: BANKS[0]!,
+        principal: '20000000', // 20M
+        dailyRate: '0.00042',
+        startDate: inv6StartDate.toDate(),
+        maturityDate: inv6StartDate.add(45, 'day').toDate(),
+        status: 'ACTIVE',
+        withdrawals: [],
+        rollovers: []
+    });
+
+    // 7. Second Investment for GTBank (Matured, started 90 days ago, 60-day duration)
+    const inv7StartDate = today.subtract(90, 'day');
+    investments.push({
+        id: uuidv4(),
+        bankId: BANKS[1]!.id,
+        bank: BANKS[1]!,
+        principal: '40000000', // 40M
+        dailyRate: '0.00033',
+        startDate: inv7StartDate.toDate(),
+        maturityDate: inv7StartDate.add(60, 'day').toDate(),
+        status: 'MATURED',
+        withdrawals: [],
+        rollovers: []
+    });
+
+    // 8. Second Investment for UBA (Active with rollover)
+    const inv8StartDate = today.subtract(25, 'day');
+    investments.push({
+        id: uuidv4(),
+        bankId: BANKS[2]!.id,
+        bank: BANKS[2]!,
+        principal: '60000000', // 60M
+        dailyRate: '0.00047',
+        startDate: inv8StartDate.toDate(),
+        maturityDate: inv8StartDate.add(40, 'day').toDate(),
+        status: 'ACTIVE',
+        withdrawals: [],
+        rollovers: [
+            {
+                id: uuidv4(),
+                amount: '5000000',
+                date: today.subtract(7, 'day').toDate()
+            }
+        ]
+    });
+
+    // 9. Second Investment for Access (Terminated, started 50 days ago, 30-day duration)
+    const inv9StartDate = today.subtract(50, 'day');
+    investments.push({
+        id: uuidv4(),
+        bankId: BANKS[3]!.id,
+        bank: BANKS[3]!,
+        principal: '15000000', // 15M
+        dailyRate: '0.00036',
+        startDate: inv9StartDate.toDate(),
+        maturityDate: inv9StartDate.add(30, 'day').toDate(),
+        status: 'TERMINATED',
+        withdrawals: [],
+        rollovers: []
+    });
+
+    // 10. Second Investment for First Bank (Active, longer duration)
+    const inv10StartDate = today.subtract(8, 'day');
+    investments.push({
+        id: uuidv4(),
+        bankId: BANKS[4]!.id,
+        bank: BANKS[4]!,
+        principal: '90000000', // 90M
+        dailyRate: '0.0004',
+        startDate: inv10StartDate.toDate(),
+        maturityDate: inv10StartDate.add(90, 'day').toDate(),
+        status: 'ACTIVE',
+        withdrawals: [],
+        rollovers: []
+    });
+
     return investments;
 };
 

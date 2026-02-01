@@ -473,7 +473,7 @@ const handleTerminate = async () => {
                                 v-if="simulatedResults.dailyBreakdown.length > 7"
                                 type="button"
                                 @click="showFullProjection = !showFullProjection"
-                                class="text-indigo-600 hover:text-indigo-800 font-medium text-[10px] sm:text-xs"
+                                class="text-indigo-600 cursor-pointer hover:text-indigo-800 font-medium text-[10px] sm:text-xs"
                             >
                                 {{ showFullProjection
                                     ? 'Show fewer days'
