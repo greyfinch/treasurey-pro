@@ -64,6 +64,17 @@ const roiTrend = computed(() => {
     return Number(((todayROI.value - yesterday) / yesterday * 100).toFixed(2))
 })
 
+const nextMaturityInvestment = computed(() => {
+    const today = dayjs().startOf('day')
+    const investmentsWithDate = filteredInvestments.value.filter(inv => {
+        return inv.status === 'ACTIVE' && inv.maturityDate && !dayjs(inv.maturityDate).isBefore(today, 'day')
+    })
+    if (!investmentsWithDate.length) return null
+    return investmentsWithDate
+        .slice()
+        .sort((a, b) => dayjs(a.maturityDate).valueOf() - dayjs(b.maturityDate).valueOf())[0]
+})
+
 // Actions
 const handleExportExcel = () => {
     exportToExcel(filteredInvestments.value, `treasury_report_${dayjs(targetDate.value).format('YYYY-MM-DD')}`)
@@ -158,13 +169,13 @@ const clearFilters = () => {
                 <!-- Summary Stats helper -->
                  <div class="mt-4 bg-primary-50 rounded-xl p-4 border border-primary-100">
                     <h4 class="text-xs font-semibold text-primary-800 uppercase tracking-wider mb-2">Next Maturity</h4>
-                    <div class="flex items-center gap-3" v-if="filteredInvestments.length">
+                    <div class="flex items-center gap-3" v-if="nextMaturityInvestment">
                         <div class="bg-white p-2 rounded-lg text-primary-600 font-bold text-lg border border-primary-100">
-                             {{ dayjs(filteredInvestments[0].maturityDate).format('DD') }}
+                            {{ dayjs(nextMaturityInvestment.maturityDate).format('DD') }}
                         </div>
                         <div>
-                             <p class="text-sm font-medium text-gray-900">{{ dayjs(filteredInvestments[0].maturityDate).format('MMMM YYYY') }}</p>
-                             <p class="text-xs text-gray-500">{{ filteredInvestments[0].bank.name }}</p>
+                            <p class="text-sm font-medium text-gray-900">{{ dayjs(nextMaturityInvestment.maturityDate).format('MMMM YYYY') }}</p>
+                            <p class="text-xs text-gray-500">{{ nextMaturityInvestment.bank.name }}</p>
                         </div>
                     </div>
                     <div v-else class="text-sm text-gray-500 italic">No active investments found.</div>
