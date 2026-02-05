@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { TrashIcon } from '@heroicons/vue/24/outline'
+import { TrashIcon, BuildingOfficeIcon } from '@heroicons/vue/24/outline'
 import { formatCurrency, formatDate, formatPercentage } from '../utils/dateHelpers'
 import { calculateInvestmentROI } from '../utils/roi'
+import { ORGANISATIONS } from '../services/mockData'
 import dayjs from 'dayjs'
 
 const props = defineProps<{
@@ -16,6 +17,11 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
+
+const getSubsidiaryName = (orgId: string) => {
+  const org = ORGANISATIONS.find(o => o.id === orgId)
+  return org ? org.name : 'Unknown'
+}
 
 const getDisplayStatus = (investment: any) => {
   const isMatured = dayjs(investment.maturityDate).isBefore(dayjs(), 'day')
@@ -92,7 +98,14 @@ const handleTerminate = (event: Event, id: string) => {
               </div>
               <div class="ml-4">
                 <div class="text-sm font-medium text-gray-900">{{ inv.bank.name }}</div>
-                <div class="text-xs text-gray-500">ID: {{ inv.id.slice(0, 8) }}</div>
+                <div class="flex items-center gap-2 text-xs text-gray-500">
+                  <span>ID: {{ inv.id.slice(0, 8) }}</span>
+                  <span class="text-gray-300">•</span>
+                  <span class="flex items-center gap-1">
+                    <BuildingOfficeIcon class="h-3 w-3" />
+                    {{ getSubsidiaryName(inv.organisationId) }}
+                  </span>
+                </div>
               </div>
             </div>
           </td>

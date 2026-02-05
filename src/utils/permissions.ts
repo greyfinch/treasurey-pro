@@ -14,7 +14,12 @@ export type Action =
     | 'approval:view_pending'
     | 'approval:approve'
     | 'approval:reject'
-    | 'audit:view';
+    | 'audit:view'
+    | 'org:create'
+    | 'org:edit'
+    | 'user:view'
+    | 'user:create'
+    | 'user:edit';
 
 export const PERMISSIONS: Record<Role, Partial<Record<Action, boolean | 'scoped' | 'conditional'>>> = {
     GROUP_CFO: {
@@ -95,5 +100,58 @@ export const PERMISSIONS: Record<Role, Partial<Record<Action, boolean | 'scoped'
         'approval:view_pending': false,
         'approval:approve': false,
         'audit:view': true,
+    },
+    GROUP_VIEWER: {
+        'org:view_all': true,
+        'bank:view': true,
+        'bank:create': false,
+        'investment:view': true,
+        'investment:create': false,
+        'investment:edit': false,
+        'roi:view': true,
+        'liquidity:view': true,
+        'withdrawal:create': false,
+        'rollover:create': false,
+        'approval:view_pending': false,
+        'approval:approve': false,
+        'approval:reject': false,
+        'audit:view': false,
+    },
+    SUB_VIEWER: {
+        'org:view_all': 'scoped',
+        'bank:view': true,
+        'bank:create': false,
+        'investment:view': 'scoped',
+        'investment:create': false,
+        'investment:edit': false,
+        'roi:view': 'scoped',
+        'liquidity:view': 'scoped',
+        'withdrawal:create': false,
+        'rollover:create': false,
+        'approval:view_pending': false,
+        'approval:approve': false,
+        'approval:reject': false,
+        'audit:view': false,
+    },
+    SYSTEM_ADMIN: {
+        'org:view_all': true,
+        'bank:view': true,
+        'bank:create': true,
+        'investment:view': false,
+        'investment:create': false,
+        'investment:edit': false,
+        'roi:view': false,
+        'liquidity:view': false,
+        'withdrawal:create': false,
+        'rollover:create': false,
+        'approval:view_pending': false,
+        'approval:approve': false,
+        'approval:reject': false,
+        'audit:view': false,
+        'org:create': true,
+        'org:edit': true,
+        'user:view': true,
+        'user:create': true,
+        'user:edit': true,
     }
 };

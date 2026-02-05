@@ -28,7 +28,7 @@ export const usePermissions = () => {
         return true;
     };
 
-    const isGroupScope = computed(() => ['GROUP_CFO', 'GROUP_TREASURY_MANAGER', 'AUDITOR'].includes(user.role));
+    const isGroupScope = computed(() => ['GROUP_CFO', 'GROUP_TREASURY_MANAGER', 'AUDITOR', 'GROUP_VIEWER', 'SYSTEM_ADMIN'].includes(user.role));
 
     return {
         user,
