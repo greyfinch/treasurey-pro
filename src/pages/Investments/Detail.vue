@@ -14,6 +14,7 @@ const route = useRoute()
 const router = useRouter()
 const investment = ref<any>(null)
 const loading = ref(true)
+const fxRates = ref<any[]>([])
 
 // Modals
 const showWithdrawModal = ref(false)
@@ -43,7 +44,13 @@ const showFullProjection = ref(false)
 onMounted(async () => {
     try {
         const id = route.params.id as string
-        const data = await mockService.getInvestmentById(id)
+        const [data, rates] = await Promise.all([
+            mockService.getInvestmentById(id),
+            mockService.getFXRates()
+        ])
+        
+        fxRates.value = rates
+
         if (data) {
             // SECURITY: Deep Scope Protection
             // If user is NOT group-scoped, they ONLY see their own organisation's investments
@@ -65,10 +72,18 @@ onMounted(async () => {
     }
 })
 
+
 const subsidiaryName = computed(() => {
     if (!investment.value) return ''
     const org = ORGANISATIONS.find(o => o.id === investment.value.organisationId)
     return org ? org.name : 'Unknown Subsidiary'
+})
+
+const baseCurrency = computed(() => user.organisationId === 'org-holdco' ? 'NGN' : 'NGN') // Mocking base currency
+
+const fxRateUsed = computed(() => {
+    if (!investment.value || investment.value.currency === baseCurrency.value) return 1
+    return fxRates.value.find(r => r.fromCurrency === investment.value.currency && r.toCurrency === baseCurrency.value)?.rate || 1
 })
 
 // Computeds
@@ -95,6 +110,15 @@ const currentPrincipal = computed(() => {
     })
     return result.principal.toNumber()
 })
+
+const reportingROI = computed(() => {
+    return accumulatedROI.value * fxRateUsed.value
+})
+
+const reportingPrincipal = computed(() => {
+    return currentPrincipal.value * fxRateUsed.value
+})
+
 
 const dailyBreakdown = computed(() => {
     if (!investment.value) return []
@@ -298,7 +322,7 @@ const handleTerminate = async () => {
             <div class="mt-8 grid grid-cols-2 md:grid-cols-4 gap-6 border-t border-gray-100 pt-6">
                 <div>
                     <p class="text-xs text-gray-500 uppercase tracking-wider">Initial Principal</p>
-                    <p class="text-lg font-bold text-gray-900">{{ formatCurrency(investment.principal) }}</p>
+                    <p class="text-lg font-bold text-gray-900">{{ formatCurrency(investment.principal, investment.currency) }}</p>
                 </div>
                 <div>
                     <p class="text-xs text-gray-500 uppercase tracking-wider">Daily Rate</p>
@@ -313,6 +337,14 @@ const handleTerminate = async () => {
                     <p class="text-lg font-medium text-gray-900">{{ formatDate(investment.maturityDate) }}</p>
                 </div>
             </div>
+            <div v-if="investment.currency !== baseCurrency" class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-blue-800 uppercase tracking-wider">FX Information:</span>
+                    <span class="text-sm text-blue-700">Reporting in {{ baseCurrency }} at rate {{ fxRateUsed }}</span>
+                </div>
+                 <span class="text-xs text-blue-500 italic">Explicit rate for conversion</span>
+            </div>
+
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -328,17 +360,26 @@ const handleTerminate = async () => {
                             class="bg-white border-primary-200 text-primary-900 rounded-lg text-sm"
                         >
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-white p-4 rounded-lg shadow-sm">
-                            <p class="text-xs text-gray-500 mb-1">Total Accrued Interest</p>
-                            <p class="text-2xl font-bold text-money-600">{{ formatCurrency(accumulatedROI) }}</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-tight mb-1">Total Accrued (Native)</p>
+                            <p class="text-2xl font-bold text-money-600">{{ formatCurrency(accumulatedROI, investment.currency) }}</p>
+                            <div v-if="investment.currency !== baseCurrency" class="mt-2 pt-2 border-t border-gray-50">
+                                <p class="text-[10px] text-gray-400 uppercase tracking-tight mb-1">Reporting ({{ baseCurrency }})</p>
+                                <p class="text-lg font-bold text-primary-600">{{ formatCurrency(reportingROI, baseCurrency) }}</p>
+                            </div>
                         </div>
-                         <div class="bg-white p-4 rounded-lg shadow-sm">
-                            <p class="text-xs text-gray-500 mb-1">Current Principal Balance</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(currentPrincipal) }}</p>
+                         <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-tight mb-1">Current Balance (Native)</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(currentPrincipal, investment.currency) }}</p>
+                            <div v-if="investment.currency !== baseCurrency" class="mt-2 pt-2 border-t border-gray-50">
+                                <p class="text-[10px] text-gray-400 uppercase tracking-tight mb-1">Reporting ({{ baseCurrency }})</p>
+                                <p class="text-lg font-bold text-gray-700">{{ formatCurrency(reportingPrincipal, baseCurrency) }}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
+
 
                 <!-- Daily Breakdown Table -->
                 <div class="card p-0 overflow-hidden">

@@ -37,6 +37,8 @@ export const PERMISSIONS: Record<Role, Partial<Record<Action, boolean | 'scoped'
         'approval:approve': true,
         'approval:reject': true,
         'audit:view': true,
+        'org:create': true,
+        'org:edit': true,
     },
     GROUP_TREASURY_MANAGER: {
         'org:view_all': true,

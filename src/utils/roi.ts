@@ -112,8 +112,15 @@ export function calculateInvestmentROI({
 
 /**
  * Calculate Total ROI Across ALL Investments (Portfolio View)
+ * If targetCurrency is provided, converts all investment ROIs to that currency.
+ * Requires fxRates if targetCurrency is different from investment currencies.
  */
-export function calculatePortfolioROI(investments: any[], targetDate: Date | string) {
+export function calculatePortfolioROI(
+    investments: any[],
+    targetDate: Date | string,
+    targetCurrency?: string,
+    fxRates: any[] = []
+) {
     return investments.reduce((acc, inv) => {
         const roi = calculateInvestmentROI({
             principal: inv.principal,
@@ -124,9 +131,33 @@ export function calculatePortfolioROI(investments: any[], targetDate: Date | str
             rollovers: inv.rollovers
         });
 
-        return acc.plus(roi.interest);
+        let interest = roi.interest;
+
+        if (targetCurrency && inv.currency !== targetCurrency) {
+            const fxRate = fxRates.find(r => r.fromCurrency === inv.currency && r.toCurrency === targetCurrency);
+            if (fxRate) {
+                interest = interest.mul(fxRate.rate);
+            } else if (inv.currency === 'NGN' && targetCurrency === 'USD') {
+                // Handle reverse if needed or throw error. For now, simple conversion if rate is USD -> NGN
+                const reverseRate = fxRates.find(r => r.fromCurrency === targetCurrency && r.toCurrency === inv.currency);
+                if (reverseRate) {
+                    interest = interest.div(reverseRate.rate);
+                }
+            }
+        }
+
+        return acc.plus(interest);
     }, new Decimal(0));
 }
+
+/**
+ * Calculate FX Gain/Loss based on current FX rate vs acquisition rate
+ * (Treasury-realistic)
+ */
+export function calculateFXImpact(nativeROI: Decimal, originalRate: number, currentRate: number) {
+    return nativeROI.mul(currentRate - originalRate);
+}
+
 
 /**
  * Generate daily ROI breakdown for a date range

@@ -110,7 +110,8 @@ const handleTerminate = (event: Event, id: string) => {
             </div>
           </td>
           <td class="px-6 py-4 whitespace-nowrap">
-            <div class="text-sm text-gray-900 font-medium">{{ formatCurrency(inv.principal) }}</div>
+            <div class="text-sm text-gray-900 font-medium">{{ formatCurrency(inv.principal, inv.currency) }}</div>
+            <div class="text-xs text-gray-500">{{ inv.currency }}</div>
           </td>
           <td class="px-6 py-4 whitespace-nowrap">
             <div class="text-sm text-gray-900">{{ formatPercentage(inv.dailyRate) }}</div>
@@ -118,7 +119,7 @@ const handleTerminate = (event: Event, id: string) => {
           </td>
            <td class="px-6 py-4 whitespace-nowrap">
             <div class="text-sm font-bold text-money-600">
-              {{ formatCurrency(getROI(inv).toNumber()) }}
+              {{ formatCurrency(getROI(inv).toNumber(), inv.currency) }}
             </div>
           </td>
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

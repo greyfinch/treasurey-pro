@@ -19,6 +19,7 @@ const { activeOrganisation } = organisationService
 const loading = ref(true)
 const investments = ref<any[]>([])
 const banks = ref<any[]>([])
+const fxRates = ref<any[]>([])
 const targetDate = ref(new Date())
 
 // Filters
@@ -27,12 +28,14 @@ const selectedStatus = ref('')
 
 onMounted(async () => {
     try {
-        const [invData, bankData] = await Promise.all([
+        const [invData, bankData, fxData] = await Promise.all([
             mockService.getInvestments(),
-            mockService.getBanks()
+            mockService.getBanks(),
+            mockService.getFXRates()
         ])
         investments.value = invData
         banks.value = bankData
+        fxRates.value = fxData
     } finally {
         loading.value = false
     }
@@ -54,40 +57,56 @@ const filteredInvestments = computed(() => {
     })
 })
 
+const baseCurrency = computed(() => activeOrganisation.value?.baseCurrency || 'NGN')
+
+const currencyBreakdown = computed(() => {
+    const breakdown: Record<string, number> = {}
+    filteredInvestments.value.forEach(inv => {
+        breakdown[inv.currency] = (breakdown[inv.currency] || 0) + Number(inv.principal)
+    })
+    return Object.entries(breakdown).map(([code, principal]) => ({ code, principal }))
+})
+
+const totalPrincipalBase = computed(() => {
+    return filteredInvestments.value.reduce((acc, inv) => {
+        if (inv.currency === baseCurrency.value) return acc + Number(inv.principal)
+        const rate = fxRates.value.find(r => r.fromCurrency === inv.currency && r.toCurrency === baseCurrency.value)?.rate || 1
+        return acc + (Number(inv.principal) * rate)
+    }, 0)
+})
+
+const totalROIBase = computed(() => {
+    return calculatePortfolioROI(filteredInvestments.value, targetDate.value, baseCurrency.value, fxRates.value).toNumber()
+})
+
+const todayROIBase = computed(() => {
+    return calculatePortfolioROI(filteredInvestments.value, new Date(), baseCurrency.value, fxRates.value).toNumber()
+})
+
+const roiTrend = computed(() => {
+    const yesterday = calculatePortfolioROI(filteredInvestments.value, dayjs().subtract(1, 'day').toDate(), baseCurrency.value, fxRates.value).toNumber()
+    if (yesterday === 0) return 0
+    return Number(((todayROIBase.value - yesterday) / yesterday * 100).toFixed(2))
+})
+
 const subsidiaryBreakdown = computed(() => {
     if (!activeOrganisation.value || activeOrganisation.value.type !== 'GROUP') return []
     
     const subs = organisationService.organisations.value.filter(o => o.type === 'SUBSIDIARY')
     return subs.map(sub => {
         const subInvs = investments.value.filter(inv => inv.organisationId === sub.id)
-        const principal = subInvs.reduce((acc, curr) => acc + Number(curr.principal), 0)
-        const roi = calculatePortfolioROI(subInvs, targetDate.value).toNumber()
+        const principal = subInvs.reduce((acc, inv) => {
+            if (inv.currency === baseCurrency.value) return acc + Number(inv.principal)
+            const rate = fxRates.value.find(r => r.fromCurrency === inv.currency && r.toCurrency === baseCurrency.value)?.rate || 1
+            return acc + (Number(inv.principal) * rate)
+        }, 0)
+        const roi = calculatePortfolioROI(subInvs, targetDate.value, baseCurrency.value, fxRates.value).toNumber()
         return {
             ...sub,
             principal,
             roi
         }
     }).sort((a, b) => b.principal - a.principal)
-})
-
-const totalPrincipal = computed(() => {
-    return filteredInvestments.value.reduce((acc, curr) => {
-        return acc + Number(curr.principal)
-    }, 0)
-})
-
-const totalROI = computed(() => {
-    return calculatePortfolioROI(filteredInvestments.value, targetDate.value).toNumber()
-})
-
-const todayROI = computed(() => {
-    return calculatePortfolioROI(filteredInvestments.value, new Date()).toNumber()
-})
-
-const roiTrend = computed(() => {
-    const yesterday = calculatePortfolioROI(filteredInvestments.value, dayjs().subtract(1, 'day').toDate()).toNumber()
-    if (yesterday === 0) return 0
-    return Number(((todayROI.value - yesterday) / yesterday * 100).toFixed(2))
 })
 
 const nextMaturityInvestment = computed(() => {
@@ -134,24 +153,49 @@ const clearFilters = () => {
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <KPICard 
                 label="Total Invested Principal" 
-                :value="formatCurrency(totalPrincipal)" 
+                :value="formatCurrency(totalPrincipalBase, baseCurrency)" 
             />
             <KPICard 
                 label="Accrued ROI (Selected Date)" 
-                :value="formatCurrency(totalROI)"
+                :value="formatCurrency(totalROIBase, baseCurrency)"
                 trend-label="Returns calculated up to selected date"
             />
             <KPICard 
                 label="Today's ROI Performance" 
-                :value="formatCurrency(todayROI)" 
+                :value="formatCurrency(todayROIBase, baseCurrency)" 
                 :trend="roiTrend"
                 trend-label="vs Yesterday"
             />
         </div>
 
+        <!-- Currency Breakdown -->
+        <div class="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Portfolio Currency Breakdown</h4>
+            <div class="flex flex-wrap gap-4">
+                <div v-for="item in currencyBreakdown" :key="item.code" class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-100">
+                    <span class="text-sm font-bold text-gray-700">{{ item.code }}:</span>
+                    <span class="text-sm text-gray-600">{{ formatCurrency(item.principal, item.code) }}</span>
+                </div>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <!-- Main Content Area -->
             <div class="lg:col-span-3 space-y-6">
+                 <!-- FX Impact Note -->
+                 <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3">
+                    <div class="p-2 bg-blue-100 rounded-lg h-fit">
+                        <ArrowTrendingUpIcon class="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-semibold text-blue-900">Multi-Currency & FX Impact</h4>
+                        <p class="text-xs text-blue-700 mt-1">
+                            Your portfolio is spread across {{ currencyBreakdown.length }} currencies. All aggregated totals are displayed in your reporting currency ({{ baseCurrency }}).
+                            ROI includes interest earned in native currency and FX gains/losses upon conversion.
+                        </p>
+                    </div>
+                </div>
+
                 <!-- Chart -->
                 <div class="card bg-white">
                     <div class="flex justify-between items-center mb-4">
@@ -160,7 +204,11 @@ const clearFilters = () => {
                              ROI Growth Trajectory
                         </h3>
                     </div>
-                    <ROILineChart :investments="filteredInvestments" />
+                    <ROILineChart 
+                        :investments="filteredInvestments" 
+                        :base-currency="baseCurrency"
+                        :fx-rates="fxRates"
+                    />
                 </div>
 
                 <!-- Subsidiary Breakdown (Only in Group View) -->
@@ -176,7 +224,7 @@ const clearFilters = () => {
                             <thead class="bg-gray-50">
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subsidiary</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Invested</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Invested ({{ baseCurrency }})</th>
                                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Accrued ROI</th>
                                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Allocation</th>
                                 </tr>
@@ -184,17 +232,17 @@ const clearFilters = () => {
                             <tbody class="bg-white divide-y divide-gray-200">
                                 <tr v-for="sub in subsidiaryBreakdown" :key="sub.id" class="hover:bg-gray-50 transition-colors">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ sub.name }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600">{{ formatCurrency(sub.principal) }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-primary-600 font-semibold">{{ formatCurrency(sub.roi) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600">{{ formatCurrency(sub.principal, baseCurrency) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-primary-600 font-semibold">{{ formatCurrency(sub.roi, baseCurrency) }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
                                         <div class="flex items-center justify-end gap-2">
                                             <div class="w-24 bg-gray-100 rounded-full h-1.5 overflow-hidden">
                                                 <div 
                                                     class="bg-primary-500 h-full rounded-full" 
-                                                    :style="{ width: `${(sub.principal / totalPrincipal) * 100}%` }"
+                                                    :style="{ width: `${(sub.principal / totalPrincipalBase) * 100}%` }"
                                                 ></div>
                                             </div>
-                                            <span class="text-xs text-gray-500 w-8">{{ ((sub.principal / totalPrincipal) * 100).toFixed(0) }}%</span>
+                                            <span class="text-xs text-gray-500 w-8">{{ ((sub.principal / totalPrincipalBase) * 100).toFixed(0) }}%</span>
                                         </div>
                                     </td>
                                 </tr>
@@ -241,7 +289,7 @@ const clearFilters = () => {
                         </div>
                         <div>
                             <p class="text-sm font-medium text-gray-900">{{ dayjs(nextMaturityInvestment.maturityDate).format('MMMM YYYY') }}</p>
-                            <p class="text-xs text-gray-500">{{ nextMaturityInvestment.bank.name }}</p>
+                            <p class="text-xs text-gray-500">{{ nextMaturityInvestment.bank.name }} ({{ nextMaturityInvestment.currency }})</p>
                         </div>
                     </div>
                     <div v-else class="text-sm text-gray-500 italic">No active investments found.</div>
@@ -250,3 +298,4 @@ const clearFilters = () => {
         </div>
     </div>
 </template>
+

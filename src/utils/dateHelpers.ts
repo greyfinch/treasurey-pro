@@ -4,10 +4,11 @@ export const formatDate = (date: Date | string) => {
     return dayjs(date).format('MMM D, YYYY');
 };
 
-export const formatCurrency = (amount: number | string | any) => {
-    return new Intl.NumberFormat('en-NG', {
+export const formatCurrency = (amount: number | string | any, currencyCode: string = 'NGN') => {
+    const locale = currencyCode === 'NGN' ? 'en-NG' : 'en-US';
+    return new Intl.NumberFormat(locale, {
         style: 'currency',
-        currency: 'NGN',
+        currency: currencyCode,
         minimumFractionDigits: 2
     }).format(Number(amount));
 };

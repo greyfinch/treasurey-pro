@@ -12,18 +12,98 @@ let BANKS = [
 
 export type OrgType = 'GROUP' | 'SUBSIDIARY';
 
+export const CurrencyCode = {
+    NGN: 'NGN',
+    USD: 'USD',
+    EUR: 'EUR',
+    GBP: 'GBP'
+} as const;
+export type CurrencyCode = typeof CurrencyCode[keyof typeof CurrencyCode];
+
+export const FXSource = {
+    MANUAL: 'MANUAL',
+    CBN: 'CBN',
+    BLOOMBERG: 'BLOOMBERG',
+    REUTERS: 'REUTERS'
+} as const;
+export type FXSource = typeof FXSource[keyof typeof FXSource];
+
+export const FXStatus = {
+    ACTIVE: 'ACTIVE',
+    SUPERSEDED: 'SUPERSEDED'
+} as const;
+export type FXStatus = typeof FXStatus[keyof typeof FXStatus];
+
+export interface Currency {
+    code: CurrencyCode;
+    name: string;
+    symbol: string;
+}
+
+export const MOCK_CURRENCIES: Currency[] = [
+    { code: CurrencyCode.NGN, name: 'Nigerian Naira', symbol: '₦' },
+    { code: CurrencyCode.USD, name: 'US Dollar', symbol: '$' },
+    { code: CurrencyCode.EUR, name: 'Euro', symbol: '€' },
+    { code: CurrencyCode.GBP, name: 'British Pound', symbol: '£' }
+];
+
+export interface FXRate {
+    id: string;
+    fromCurrency: CurrencyCode;
+    toCurrency: CurrencyCode;
+    rate: number;
+    source: FXSource;
+    effectiveDate: Date;
+    status: FXStatus;
+    createdAt: Date;
+}
+
+export const MOCK_FX_RATES: FXRate[] = [
+    {
+        id: uuidv4(),
+        fromCurrency: CurrencyCode.USD,
+        toCurrency: CurrencyCode.NGN,
+        rate: 1550.25,
+        source: FXSource.CBN,
+        effectiveDate: dayjs().startOf('day').toDate(),
+        status: FXStatus.ACTIVE,
+        createdAt: new Date()
+    },
+    {
+        id: uuidv4(),
+        fromCurrency: CurrencyCode.EUR,
+        toCurrency: CurrencyCode.NGN,
+        rate: 1680.50,
+        source: FXSource.CBN,
+        effectiveDate: dayjs().startOf('day').toDate(),
+        status: FXStatus.ACTIVE,
+        createdAt: new Date()
+    },
+    {
+        id: uuidv4(),
+        fromCurrency: CurrencyCode.GBP,
+        toCurrency: CurrencyCode.NGN,
+        rate: 1950.75,
+        source: FXSource.CBN,
+        effectiveDate: dayjs().startOf('day').toDate(),
+        status: FXStatus.ACTIVE,
+        createdAt: new Date()
+    }
+];
+
 export interface Organisation {
     id: string;
     name: string;
     type: OrgType;
     parentId?: string | null;
+    baseCurrency: CurrencyCode;
 }
 
 export const ORGANISATIONS: Organisation[] = [
-    { id: 'org-holdco', name: 'Acme Holdings', type: 'GROUP', parentId: null },
-    { id: 'org-foods', name: 'Acme Foods', type: 'SUBSIDIARY', parentId: 'org-holdco' },
-    { id: 'org-transport', name: 'Acme Transport', type: 'SUBSIDIARY', parentId: 'org-holdco' },
-    { id: 'org-energy', name: 'Acme Energy', type: 'SUBSIDIARY', parentId: 'org-holdco' }
+    { id: 'org-holdco', name: 'Acme Holdings', type: 'GROUP', parentId: null, baseCurrency: CurrencyCode.NGN },
+    { id: 'org-foods', name: 'Acme Foods', type: 'SUBSIDIARY', parentId: 'org-holdco', baseCurrency: CurrencyCode.NGN },
+    { id: 'org-transport', name: 'Acme Transport', type: 'SUBSIDIARY', parentId: 'org-holdco', baseCurrency: CurrencyCode.NGN },
+    { id: 'org-energy', name: 'Acme Energy', type: 'SUBSIDIARY', parentId: 'org-holdco', baseCurrency: CurrencyCode.NGN }
 ];
 
 export type Role = 'GROUP_CFO' | 'GROUP_TREASURY_MANAGER' | 'SUB_FINANCE_MANAGER' | 'SUB_FINANCE_OFFICER' | 'AUDITOR' | 'GROUP_VIEWER' | 'SUB_VIEWER' | 'SYSTEM_ADMIN';
@@ -61,19 +141,35 @@ export const MOCK_USERS = [
 ];
 
 
+export interface Investment {
+    id: string;
+    organisationId: string;
+    bankId: string;
+    bank: { id: string, name: string };
+    principal: string;
+    currency: CurrencyCode;
+    dailyRate: string;
+    startDate: Date;
+    maturityDate: Date;
+    status: 'ACTIVE' | 'MATURED' | 'TERMINATED';
+    withdrawals: any[];
+    rollovers: any[];
+}
+
 const generateInvestments = () => {
-    const investments: any[] = [];
+    const investments: Investment[] = [];
     const today = dayjs();
 
-    // 1. Active High Yield Investment (Started 45 days ago, 30-day duration)
+    // 1. Active High Yield Investment (Started 45 days ago, 30-day duration) - USD
     const inv1StartDate = today.subtract(45, 'day');
     investments.push({
         id: uuidv4(),
         organisationId: 'org-foods',
         bankId: BANKS[0]!.id,
         bank: BANKS[0]!,
-        principal: '50000000', // 50M
-        dailyRate: '0.00045', // ~16.4% APY
+        principal: '50000', // 50k USD
+        currency: CurrencyCode.USD,
+        dailyRate: '0.0003', // ~11% APY
         startDate: inv1StartDate.toDate(),
         maturityDate: inv1StartDate.add(30, 'day').toDate(), // 30 days duration
         status: 'ACTIVE',
@@ -81,7 +177,7 @@ const generateInvestments = () => {
         rollovers: []
     });
 
-    // 2. Matured Investment (Started 60 days ago, 30-day duration, already matured)
+    // 2. Matured Investment - NGN
     const inv2StartDate = today.subtract(60, 'day');
     investments.push({
         id: uuidv4(),
@@ -89,15 +185,16 @@ const generateInvestments = () => {
         bankId: BANKS[1]!.id,
         bank: BANKS[1]!,
         principal: '25000000', // 25M
+        currency: CurrencyCode.NGN,
         dailyRate: '0.00035',
         startDate: inv2StartDate.toDate(),
-        maturityDate: inv2StartDate.add(30, 'day').toDate(), // 30 days duration, already matured
+        maturityDate: inv2StartDate.add(30, 'day').toDate(),
         status: 'MATURED',
         withdrawals: [],
         rollovers: []
     });
 
-    // 3. Active Investment with Withdrawals (Started 20 days ago, 30-day duration)
+    // 3. Active Investment with Withdrawals - NGN
     const inv3StartDate = today.subtract(20, 'day');
     investments.push({
         id: uuidv4(),
@@ -105,9 +202,10 @@ const generateInvestments = () => {
         bankId: BANKS[2]!.id,
         bank: BANKS[2]!,
         principal: '100000000', // 100M
-        dailyRate: '0.0005', // ~18.25% APY
+        currency: CurrencyCode.NGN,
+        dailyRate: '0.0005',
         startDate: inv3StartDate.toDate(),
-        maturityDate: inv3StartDate.add(30, 'day').toDate(), // 30 days duration
+        maturityDate: inv3StartDate.add(30, 'day').toDate(),
         status: 'ACTIVE',
         withdrawals: [
             {
@@ -120,47 +218,50 @@ const generateInvestments = () => {
         rollovers: []
     });
 
-    // 4. Short-term Active Investment (Started 15 days ago, 30-day duration)
+    // 4. Short-term Active Investment - EUR
     const inv4StartDate = today.subtract(15, 'day');
     investments.push({
         id: uuidv4(),
         organisationId: 'org-foods',
         bankId: BANKS[3]!.id,
         bank: BANKS[3]!,
-        principal: '30000000', // 30M
-        dailyRate: '0.0004',
+        principal: '100000', // 100k EUR
+        currency: CurrencyCode.EUR,
+        dailyRate: '0.0002',
         startDate: inv4StartDate.toDate(),
-        maturityDate: inv4StartDate.add(30, 'day').toDate(), // 30 days duration
+        maturityDate: inv4StartDate.add(30, 'day').toDate(),
         status: 'ACTIVE',
         withdrawals: [],
         rollovers: []
     });
 
-    // 5. Recent Active Investment (Started 5 days ago, 30-day duration)
+    // 5. Recent Active Investment - GBP
     const inv5StartDate = today.subtract(5, 'day');
     investments.push({
         id: uuidv4(),
         organisationId: 'org-transport',
         bankId: BANKS[4]!.id,
         bank: BANKS[4]!,
-        principal: '75000000', // 75M
-        dailyRate: '0.00038',
+        principal: '25000', // 25k GBP
+        currency: CurrencyCode.GBP,
+        dailyRate: '0.00025',
         startDate: inv5StartDate.toDate(),
-        maturityDate: inv5StartDate.add(30, 'day').toDate(), // 30 days duration
+        maturityDate: inv5StartDate.add(30, 'day').toDate(),
         status: 'ACTIVE',
         withdrawals: [],
         rollovers: []
     });
 
-    // 6. Second Active Investment for Zenith (Started 12 days ago, 45-day duration)
+    // 6. Another USD Investment
     const inv6StartDate = today.subtract(12, 'day');
     investments.push({
         id: uuidv4(),
         organisationId: 'org-energy',
         bankId: BANKS[0]!.id,
         bank: BANKS[0]!,
-        principal: '20000000', // 20M
-        dailyRate: '0.00042',
+        principal: '150000', // 150k USD
+        currency: CurrencyCode.USD,
+        dailyRate: '0.00032',
         startDate: inv6StartDate.toDate(),
         maturityDate: inv6StartDate.add(45, 'day').toDate(),
         status: 'ACTIVE',
@@ -168,7 +269,7 @@ const generateInvestments = () => {
         rollovers: []
     });
 
-    // 7. Second Investment for GTBank (Matured, started 90 days ago, 60-day duration)
+    // 7. Regular NGN Investment
     const inv7StartDate = today.subtract(90, 'day');
     investments.push({
         id: uuidv4(),
@@ -176,6 +277,7 @@ const generateInvestments = () => {
         bankId: BANKS[1]!.id,
         bank: BANKS[1]!,
         principal: '40000000', // 40M
+        currency: CurrencyCode.NGN,
         dailyRate: '0.00033',
         startDate: inv7StartDate.toDate(),
         maturityDate: inv7StartDate.add(60, 'day').toDate(),
@@ -184,7 +286,8 @@ const generateInvestments = () => {
         rollovers: []
     });
 
-    // 8. Second Investment for UBA (Active with rollover)
+
+    // 8. Second Investment for UBA - NGN
     const inv8StartDate = today.subtract(25, 'day');
     investments.push({
         id: uuidv4(),
@@ -192,6 +295,7 @@ const generateInvestments = () => {
         bankId: BANKS[2]!.id,
         bank: BANKS[2]!,
         principal: '60000000', // 60M
+        currency: CurrencyCode.NGN,
         dailyRate: '0.00047',
         startDate: inv8StartDate.toDate(),
         maturityDate: inv8StartDate.add(40, 'day').toDate(),
@@ -206,14 +310,15 @@ const generateInvestments = () => {
         ]
     });
 
-    // 9. Second Investment for Access (Terminated, started 50 days ago, 30-day duration)
+    // 9. Second Investment for Access - EUR
     const inv9StartDate = today.subtract(50, 'day');
     investments.push({
         id: uuidv4(),
         organisationId: 'org-energy',
         bankId: BANKS[3]!.id,
         bank: BANKS[3]!,
-        principal: '15000000', // 15M
+        principal: '15000', // 15k EUR
+        currency: CurrencyCode.EUR,
         dailyRate: '0.00036',
         startDate: inv9StartDate.toDate(),
         maturityDate: inv9StartDate.add(30, 'day').toDate(),
@@ -222,14 +327,15 @@ const generateInvestments = () => {
         rollovers: []
     });
 
-    // 10. Second Investment for First Bank (Active, longer duration)
+    // 10. Second Investment for First Bank - GBP
     const inv10StartDate = today.subtract(8, 'day');
     investments.push({
         id: uuidv4(),
         organisationId: 'org-foods',
         bankId: BANKS[4]!.id,
         bank: BANKS[4]!,
-        principal: '90000000', // 90M
+        principal: '90000', // 90k GBP
+        currency: CurrencyCode.GBP,
         dailyRate: '0.0004',
         startDate: inv10StartDate.toDate(),
         maturityDate: inv10StartDate.add(90, 'day').toDate(),
@@ -278,7 +384,7 @@ export const mockService = {
         return new Promise((resolve) => resolve(CURRENT_USER));
     },
 
-    getInvestments: async (): Promise<any[]> => {
+    getInvestments: async (): Promise<Investment[]> => {
         return new Promise((resolve) => {
             setTimeout(() => {
                 resolve(MOCK_INVESTMENTS);
@@ -286,7 +392,7 @@ export const mockService = {
         });
     },
 
-    getInvestmentById: async (id: string): Promise<any> => {
+    getInvestmentById: async (id: string): Promise<Investment | undefined> => {
         return new Promise((resolve) => {
             setTimeout(() => {
                 const inv = MOCK_INVESTMENTS.find((i: any) => i.id === id);
@@ -299,17 +405,40 @@ export const mockService = {
         return new Promise((resolve) => resolve(BANKS));
     },
 
-    addInvestment: async (investment: any): Promise<any> => {
+    getCurrencies: async (): Promise<Currency[]> => {
+        return new Promise((resolve) => resolve(MOCK_CURRENCIES));
+    },
+
+    getFXRates: async (): Promise<FXRate[]> => {
+        return new Promise((resolve) => resolve(MOCK_FX_RATES));
+    },
+
+    addFXRate: async (fxRate: Omit<FXRate, 'id' | 'createdAt' | 'status'>): Promise<FXRate> => {
+        return new Promise((resolve) => {
+            const newRate: FXRate = {
+                ...fxRate,
+                id: uuidv4(),
+                createdAt: new Date(),
+                status: FXStatus.ACTIVE
+            };
+            MOCK_FX_RATES.push(newRate);
+            logAction('fxrate:create', newRate);
+            resolve(newRate);
+        });
+    },
+
+    addInvestment: async (investment: Omit<Investment, 'id' | 'status' | 'withdrawals' | 'rollovers'>): Promise<Investment> => {
         return new Promise((resolve) => {
             setTimeout(() => {
                 // Backend-side Security Verification
                 if (CURRENT_USER.role !== 'GROUP_CFO' &&
                     CURRENT_USER.role !== 'GROUP_TREASURY_MANAGER' &&
+                    CURRENT_USER.role !== 'SYSTEM_ADMIN' &&
                     CURRENT_USER.organisationId !== investment.organisationId) {
                     throw new Error('Unauthorised: You can only create investments for your own organisation.');
                 }
 
-                const newInvestment = {
+                const newInvestment: Investment = {
                     ...investment,
                     id: uuidv4(),
                     status: 'ACTIVE',
@@ -426,8 +555,73 @@ export const mockService = {
         });
     },
 
-    getAuditLogs: async (): Promise<AuditLog[]> => {
-        return new Promise((resolve) => resolve(AUDIT_LOGS));
+    // Organisation CRUD
+    addOrganisation: async (org: Omit<Organisation, 'id'>): Promise<Organisation> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                // Security Check
+                if (CURRENT_USER.role !== 'GROUP_CFO' && CURRENT_USER.role !== 'SYSTEM_ADMIN') {
+                    throw new Error('Unauthorised: Only Group CFO or System Admin can create subsidiaries.');
+                }
+
+                const newOrg: Organisation = {
+                    ...org,
+                    id: `org-${org.name.toLowerCase().replace(/\s+/g, '-')}-${uuidv4().slice(0, 4)}`
+                };
+                ORGANISATIONS.push(newOrg);
+                logAction('org:create', newOrg);
+                resolve(newOrg);
+            }, 500);
+        });
+    },
+
+    updateOrganisation: async (id: string, updates: Partial<Organisation>): Promise<Organisation> => {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                // Security Check
+                if (CURRENT_USER.role !== 'GROUP_CFO' && CURRENT_USER.role !== 'SYSTEM_ADMIN') {
+                    throw new Error('Unauthorised: Only Group CFO or System Admin can update subsidiaries.');
+                }
+
+                const index = ORGANISATIONS.findIndex(o => o.id === id);
+                if (index === -1) {
+                    reject('Organisation not found');
+                    return;
+                }
+                const updatedOrg = { ...ORGANISATIONS[index]!, ...updates };
+                ORGANISATIONS[index] = updatedOrg;
+                logAction('org:edit', { id, ...updates });
+                resolve(updatedOrg);
+            }, 500);
+        });
+    },
+
+    deleteOrganisation: async (id: string): Promise<void> => {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                // Security Check
+                if (CURRENT_USER.role !== 'GROUP_CFO' && CURRENT_USER.role !== 'SYSTEM_ADMIN') {
+                    throw new Error('Unauthorised: Only Group CFO or System Admin can delete subsidiaries.');
+                }
+
+                const index = ORGANISATIONS.findIndex(o => o.id === id);
+                if (index === -1) {
+                    reject('Organisation not found');
+                    return;
+                }
+
+                // Prevent deleting self or group
+                if (ORGANISATIONS[index]!.type === 'GROUP') {
+                    reject('Cannot delete Group organisation');
+                    return;
+                }
+
+                const deletedOrg = ORGANISATIONS[index];
+                ORGANISATIONS.splice(index, 1);
+                logAction('org:delete', deletedOrg);
+                resolve();
+            }, 500);
+        });
     },
 
     setMockRole: (role: Role, orgId: string) => {
@@ -450,5 +644,16 @@ export const mockService = {
                 }
             }, 500);
         });
+    },
+
+    async getAuditLogs(): Promise<any[]> {
+        return new Promise((resolve) => {
+            resolve([
+                { id: '1', action: 'LOGIN', userId: 'user-1', timestamp: new Date(), details: 'User logged in' },
+                { id: '2', action: 'INVESTMENT_CREATE', userId: 'user-1', timestamp: new Date(), details: 'New multi-currency investment added' },
+                { id: '3', action: 'ORG_CREATE', userId: 'user-1', timestamp: new Date(), details: 'New subsidiary created' }
+            ]);
+        });
     }
 };
+

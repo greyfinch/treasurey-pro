@@ -42,10 +42,12 @@ const newInvestment = ref({
     organisationId: '',
     bankId: '',
     principal: '',
+    currency: 'NGN' as any,
     dailyRate: '',
     startDate: dayjs().format('YYYY-MM-DD'),
     maturityDate: dayjs().add(1, 'year').format('YYYY-MM-DD')
 })
+
 
 // Initialize organisationId when modal opens
 watch(showModal, (val: boolean) => {
@@ -102,8 +104,9 @@ const totalPrincipal = computed(() => {
 })
 
 const totalAccruedROI = computed(() => {
-    return calculatePortfolioROI(scopedInvestments.value, targetDate.value).toNumber()
+    return calculatePortfolioROI(scopedInvestments.value, targetDate.value, 'NGN', []).toNumber()
 })
+
 
 const cashLockInMetrics = computed(() => {
     const totalPrincipalValue = scopedInvestments.value.reduce((sum, inv) => sum + (Number(inv.principal) || 0), 0)
@@ -173,10 +176,12 @@ const handleAddInvestment = async () => {
             organisationId: activeOrganisation.value?.type === 'SUBSIDIARY' ? activeOrganisation.value.id : '',
             bankId: '',
             principal: '',
+            currency: 'NGN' as any,
             dailyRate: '',
             startDate: dayjs().format('YYYY-MM-DD'),
             maturityDate: dayjs().add(1, 'year').format('YYYY-MM-DD')
         }
+
     } finally {
         isSubmitting.value = false
     }
@@ -351,14 +356,25 @@ const confirmTerminate = async () => {
                             </div>
 
                             <div>
+                                <label class="block text-sm font-medium text-gray-700">Currency</label>
+                                <select v-model="newInvestment.currency" required class="mt-1 text-gray-700 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border">
+                                    <option value="NGN">NGN - Nigerian Naira</option>
+                                    <option value="USD">USD - US Dollar</option>
+                                    <option value="EUR">EUR - Euro</option>
+                                    <option value="GBP">GBP - British Pound</option>
+                                </select>
+                            </div>
+
+                            <div>
                                 <label class="block text-sm font-medium text-gray-700">Principal Amount</label>
                                 <div class="mt-1 relative rounded-md shadow-sm">
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <span class="text-gray-500 sm:text-sm">₦</span>
+                                        <span class="text-gray-500 sm:text-sm">{{ newInvestment.currency === 'NGN' ? '₦' : '$' }}</span>
                                     </div>
                                     <input type="number" v-model="newInvestment.principal" required class="focus:ring-primary-500 text-gray-700 focus:border-primary-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="0.00">
                                 </div>
                             </div>
+
 
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Daily Interest Rate</label>

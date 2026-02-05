@@ -31,12 +31,16 @@ ChartJS.register(
 const props = defineProps<{
   investments: any[]
   days?: number
+  baseCurrency?: string
+  fxRates?: any[]
 }>()
 
 const chartData = computed(() => {
   const days = props.days || 30
   const labels = []
   const data = []
+  const targetCurrency = props.baseCurrency || 'NGN'
+  const fxRates = props.fxRates || []
   
   // Generate data for the last N days up to today + N days projection
   // Let's show past 30 days and future 30 days
@@ -47,10 +51,11 @@ const chartData = computed(() => {
   let current = start
   while (current.isBefore(end)) {
     labels.push(current.format('MMM D'))
-    const roi = calculatePortfolioROI(props.investments, current.toDate())
+    const roi = calculatePortfolioROI(props.investments, current.toDate(), targetCurrency, fxRates)
     data.push(roi.toNumber())
     current = current.add(1, 'day')
   }
+
   
   return {
     labels,
