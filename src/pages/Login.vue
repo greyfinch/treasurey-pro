@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { BuildingLibraryIcon } from '@heroicons/vue/24/solid'
+import { mockService } from '../services/mockData'
 
 const router = useRouter()
 const username = ref('')
@@ -13,14 +14,17 @@ const handleLogin = async () => {
   error.value = ''
   isLoading.value = true
 
-  // Simulate a small delay for better UX
-  await new Promise(resolve => setTimeout(resolve, 500))
-
-  if (username.value === 'admin' && password.value === 'password') {
-    localStorage.setItem('isAuthenticated', 'true')
-    router.push('/')
-  } else {
-    error.value = 'Invalid username or password'
+  try {
+    const user = await mockService.login(username.value, password.value)
+    if (user) {
+      localStorage.setItem('isAuthenticated', 'true')
+      router.push('/')
+    } else {
+      error.value = 'Invalid username or password'
+    }
+  } catch (e) {
+    error.value = 'Login failed. Please try again.'
+  } finally {
     isLoading.value = false
   }
 }
@@ -98,9 +102,15 @@ const handleLogin = async () => {
 
         <!-- Test Credentials -->
         <div class="mt-6 pt-6 border-t border-gray-200">
-          <p class="text-xs text-gray-500 text-center">
-            <span class="font-medium">Test credentials:</span> admin / password
-          </p>
+          <p class="text-xs font-semibold text-gray-500 mb-2">Test credentials (password: password):</p>
+          <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] text-gray-400">
+            <div><span class="font-medium text-gray-600">cfo</span>: Group CFO</div>
+            <div><span class="font-medium text-gray-600">treasury</span>: Group Treasury</div>
+            <div><span class="font-medium text-gray-600">manager_foods</span>: Foods Mgr</div>
+            <div><span class="font-medium text-gray-600">officer_foods</span>: Foods Officer</div>
+            <div><span class="font-medium text-gray-600">manager_transport</span>: Trans Mgr</div>
+            <div><span class="font-medium text-gray-600">auditor</span>: Auditor</div>
+          </div>
         </div>
       </div>
     </div>

@@ -3,12 +3,22 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { BuildingLibraryIcon } from '@heroicons/vue/24/solid'
 import { Bars3Icon, XMarkIcon } from '@heroicons/vue/24/outline'
+import SubsidiarySwitcher from './components/SubsidiarySwitcher.vue'
+import { organisationService } from './services/organisationService'
+import { usePermissions } from './composables/usePermissions'
+import { onMounted } from 'vue'
+
+const { canDo } = usePermissions()
 
 const router = useRouter()
 const route = useRoute()
 const isMobileMenuOpen = ref(false)
 
 const isLoginPage = computed(() => route.name === 'Login')
+
+onMounted(async () => {
+  await organisationService.init()
+})
 
 const handleLogout = () => {
   localStorage.removeItem('isAuthenticated')
@@ -43,35 +53,47 @@ const handleLogout = () => {
                 Investments
               </router-link>
               <router-link 
+                v-if="canDo('bank:view')"
                 to="/banks" 
                 class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
                 active-class="border-primary-500 text-gray-900"
               >
                 Banks
               </router-link>
+              <router-link 
+                v-if="canDo('audit:view')"
+                to="/audit-logs" 
+                class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                active-class="border-primary-500 text-gray-900"
+              >
+                Audit Logs
+              </router-link>
             </div>
           </div>
-          <div class="flex items-center gap-4">
-             <!-- Mobile menu button -->
-            <div class="flex items-center sm:hidden">
+          <div class="flex items-center gap-6">
+            <SubsidiarySwitcher />
+            <div class="flex items-center gap-4">
+              <!-- Mobile menu button -->
+              <div class="flex items-center sm:hidden">
+                <button 
+                  @click="isMobileMenuOpen = !isMobileMenuOpen"
+                  type="button" 
+                  class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500" 
+                  aria-controls="mobile-menu" 
+                  :aria-expanded="isMobileMenuOpen"
+                >
+                  <span class="sr-only">Open main menu</span>
+                  <Bars3Icon v-if="!isMobileMenuOpen" class="block h-6 w-6" aria-hidden="true" />
+                  <XMarkIcon v-else class="block h-6 w-6" aria-hidden="true" />
+                </button>
+              </div>
               <button 
-                @click="isMobileMenuOpen = !isMobileMenuOpen"
-                type="button" 
-                class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500" 
-                aria-controls="mobile-menu" 
-                :aria-expanded="isMobileMenuOpen"
+                @click="handleLogout"
+                class="bg-red-50 text-red-700 px-3 py-1.5 rounded-full text-xs font-semibold border border-red-200 hover:bg-red-100 transition-colors hidden sm:block"
               >
-                <span class="sr-only">Open main menu</span>
-                <Bars3Icon v-if="!isMobileMenuOpen" class="block h-6 w-6" aria-hidden="true" />
-                <XMarkIcon v-else class="block h-6 w-6" aria-hidden="true" />
+                  Logout
               </button>
             </div>
-            <button 
-              @click="handleLogout"
-              class="bg-red-50 text-red-700 px-3 py-1.5 rounded-full text-xs font-semibold border border-red-200 hover:bg-red-100 transition-colors hidden sm:block"
-            >
-                Logout
-            </button>
           </div>
         </div>
       </div>
@@ -96,12 +118,22 @@ const handleLogout = () => {
             Investments
           </router-link>
           <router-link 
+            v-if="canDo('bank:view')"
             to="/banks" 
             class="border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
             active-class="bg-primary-50 border-primary-500 text-primary-700"
             @click="isMobileMenuOpen = false"
           >
             Banks
+          </router-link>
+          <router-link 
+            v-if="canDo('audit:view')"
+            to="/audit-logs" 
+            class="border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
+            active-class="bg-primary-50 border-primary-500 text-primary-700"
+            @click="isMobileMenuOpen = false"
+          >
+            Audit Logs
           </router-link>
           <div class="mt-4 pt-4 border-t border-gray-200 pl-3">
              <button 

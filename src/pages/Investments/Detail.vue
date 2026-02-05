@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { mockService } from '../../services/mockData'
+import { mockService, ORGANISATIONS } from '../../services/mockData'
 import { calculateDailyROI, calculateInvestmentROI } from '../../utils/roi'
 import { formatDate, formatCurrency, formatPercentage } from '../../utils/dateHelpers'
-import { ArrowLeftIcon, BanknotesIcon, ArrowPathIcon, XMarkIcon, TrashIcon } from '@heroicons/vue/24/outline'
+import { ArrowLeftIcon, BanknotesIcon, ArrowPathIcon, XMarkIcon, TrashIcon, BuildingOfficeIcon } from '@heroicons/vue/24/outline'
 import dayjs from 'dayjs'
+import { usePermissions } from '../../composables/usePermissions'
+
+const { user, canDo, isGroupScope } = usePermissions()
 
 const route = useRoute()
 const router = useRouter()
@@ -42,6 +45,14 @@ onMounted(async () => {
         const id = route.params.id as string
         const data = await mockService.getInvestmentById(id)
         if (data) {
+            // SECURITY: Deep Scope Protection
+            // If user is NOT group-scoped, they ONLY see their own organisation's investments
+            if (!isGroupScope.value && data.organisationId !== user.organisationId) {
+                console.warn('Security Block: Unauthorised access to investment in other organisation');
+                router.push('/investments')
+                return
+            }
+
             investment.value = data
             // Initialize simulator with current investment values
             simulatorPrincipal.value = data.principal
@@ -52,6 +63,12 @@ onMounted(async () => {
     } finally {
         loading.value = false
     }
+})
+
+const subsidiaryName = computed(() => {
+    if (!investment.value) return ''
+    const org = ORGANISATIONS.find(o => o.id === investment.value.organisationId)
+    return org ? org.name : 'Unknown Subsidiary'
 })
 
 // Computeds
@@ -237,11 +254,14 @@ const handleTerminate = async () => {
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">{{ investment.bank.name }} Investment</h1>
-                    <p class="text-sm text-gray-500">ID: {{ investment.id }}</p>
+                    <div class="flex items-center gap-2 mt-1">
+                        <BuildingOfficeIcon class="h-4 w-4 text-gray-400" />
+                        <span class="text-sm font-medium text-gray-600">{{ subsidiaryName }}</span>
+                    </div>
                 </div>
                 <div class="flex items-center gap-2">
                      <button 
-                        v-if="investment.status === 'ACTIVE'"
+                        v-if="investment.status === 'ACTIVE' && canDo('withdrawal:create', { organisationId: investment.organisationId })"
                         @click="showWithdrawModal = true"
                         class="px-3 py-1.5 text-sm text-red-600 font-medium bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-colors flex items-center gap-1"
                     >
@@ -249,7 +269,7 @@ const handleTerminate = async () => {
                         Withdraw
                     </button>
                      <button 
-                        v-if="investment.status === 'ACTIVE'"
+                        v-if="investment.status === 'ACTIVE' && canDo('rollover:create', { organisationId: investment.organisationId })"
                         @click="showRolloverModal = true"
                         class="px-3 py-1.5 text-sm font-medium text-primary-700 bg-primary-50 hover:bg-primary-100 rounded-lg border border-primary-200 transition-colors flex items-center gap-1"
                     >
@@ -257,7 +277,7 @@ const handleTerminate = async () => {
                         Rollover
                     </button>
                      <button 
-                        v-if="investment.status === 'ACTIVE'"
+                        v-if="investment.status === 'ACTIVE' && canDo('investment:edit', { organisationId: investment.organisationId })"
                         @click="showTerminateModal = true"
                         class="px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg border border-red-700 transition-colors flex items-center gap-1"
                     >

@@ -11,7 +11,10 @@ import { mockService } from '../services/mockData'
 import { calculatePortfolioROI } from '../utils/roi'
 import { exportToExcel, exportToCSV } from '../utils/export'
 import { formatCurrency } from '../utils/dateHelpers'
-import { ArrowTrendingUpIcon, ArrowPathIcon } from '@heroicons/vue/24/outline'
+import { ArrowTrendingUpIcon, ArrowPathIcon, BuildingOffice2Icon } from '@heroicons/vue/24/outline'
+import { organisationService } from '../services/organisationService'
+
+const { activeOrganisation } = organisationService
 
 const loading = ref(true)
 const investments = ref<any[]>([])
@@ -35,13 +38,36 @@ onMounted(async () => {
     }
 })
 
+// Scoped Investments based on active organisation
+const scopedInvestments = computed(() => {
+    if (!activeOrganisation.value) return []
+    if (activeOrganisation.value.type === 'GROUP') return investments.value
+    return investments.value.filter(inv => inv.organisationId === activeOrganisation.value?.id)
+})
+
 // Computed Properties
 const filteredInvestments = computed(() => {
-    return investments.value.filter(inv => {
+    return scopedInvestments.value.filter(inv => {
         const matchBank = !selectedBankId.value || inv.bankId === selectedBankId.value
         const matchStatus = !selectedStatus.value || inv.status === selectedStatus.value
         return matchBank && matchStatus
     })
+})
+
+const subsidiaryBreakdown = computed(() => {
+    if (!activeOrganisation.value || activeOrganisation.value.type !== 'GROUP') return []
+    
+    const subs = organisationService.organisations.value.filter(o => o.type === 'SUBSIDIARY')
+    return subs.map(sub => {
+        const subInvs = investments.value.filter(inv => inv.organisationId === sub.id)
+        const principal = subInvs.reduce((acc, curr) => acc + Number(curr.principal), 0)
+        const roi = calculatePortfolioROI(subInvs, targetDate.value).toNumber()
+        return {
+            ...sub,
+            principal,
+            roi
+        }
+    }).sort((a, b) => b.principal - a.principal)
 })
 
 const totalPrincipal = computed(() => {
@@ -135,6 +161,46 @@ const clearFilters = () => {
                         </h3>
                     </div>
                     <ROILineChart :investments="filteredInvestments" />
+                </div>
+
+                <!-- Subsidiary Breakdown (Only in Group View) -->
+                <div v-if="activeOrganisation?.type === 'GROUP'" class="card p-0 overflow-hidden">
+                    <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                        <h3 class="font-semibold text-gray-900 flex items-center gap-2">
+                            <BuildingOffice2Icon class="w-5 h-5 text-primary-500" />
+                            Subsidiary Performance
+                        </h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subsidiary</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Invested</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Accrued ROI</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Allocation</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr v-for="sub in subsidiaryBreakdown" :key="sub.id" class="hover:bg-gray-50 transition-colors">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ sub.name }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600">{{ formatCurrency(sub.principal) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-primary-600 font-semibold">{{ formatCurrency(sub.roi) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
+                                        <div class="flex items-center justify-end gap-2">
+                                            <div class="w-24 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                                <div 
+                                                    class="bg-primary-500 h-full rounded-full" 
+                                                    :style="{ width: `${(sub.principal / totalPrincipal) * 100}%` }"
+                                                ></div>
+                                            </div>
+                                            <span class="text-xs text-gray-500 w-8">{{ ((sub.principal / totalPrincipal) * 100).toFixed(0) }}%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- Table -->

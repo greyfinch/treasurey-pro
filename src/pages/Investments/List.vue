@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { PlusIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 import dayjs from 'dayjs'
 import InvestmentsTable from '../../components/InvestmentsTable.vue'
 import FilterPanel from '../../components/FilterPanel.vue'
 import BankFormModal from '../../components/BankFormModal.vue'
-import { mockService } from '../../services/mockData'
+import { mockService, ORGANISATIONS } from '../../services/mockData'
 import { formatCurrency } from '../../utils/dateHelpers'
 import { calculatePortfolioROI } from '../../utils/roi'
+import { organisationService } from '../../services/organisationService'
+import { usePermissions } from '../../composables/usePermissions'
+
+const { activeOrganisation } = organisationService
+const { user, canDo, isGroupScope } = usePermissions()
 
 const loading = ref(true)
 const investments = ref<any[]>([])
@@ -32,12 +37,21 @@ const handleBankSaved = async (newBank: any) => {
     // Auto-select the new bank
     newInvestment.value.bankId = newBank.id
 }
+
 const newInvestment = ref({
+    organisationId: '',
     bankId: '',
     principal: '',
     dailyRate: '',
     startDate: dayjs().format('YYYY-MM-DD'),
     maturityDate: dayjs().add(1, 'year').format('YYYY-MM-DD')
+})
+
+// Initialize organisationId when modal opens
+watch(showModal, (val: boolean) => {
+    if (val && activeOrganisation.value && activeOrganisation.value.type === 'SUBSIDIARY') {
+        newInvestment.value.organisationId = activeOrganisation.value.id
+    }
 })
 
 onMounted(async () => {
@@ -63,8 +77,20 @@ const getDisplayStatus = (inv: any) => {
     return inv.status
 }
 
+// Scoped Investments based on active organisation
+const scopedInvestments = computed(() => {
+    // SECURITY: If user is NOT group-scoped, they ONLY see their own organisation
+    if (!isGroupScope.value) {
+        return investments.value.filter(inv => inv.organisationId === user.organisationId)
+    }
+
+    if (!activeOrganisation.value) return []
+    if (activeOrganisation.value.type === 'GROUP') return investments.value
+    return investments.value.filter(inv => inv.organisationId === activeOrganisation.value?.id)
+})
+
 const filteredInvestments = computed(() => {
-    return investments.value.filter(inv => {
+    return scopedInvestments.value.filter(inv => {
         const matchBank = !selectedBankId.value || inv.bankId === selectedBankId.value
         const matchStatus = !selectedStatus.value || getDisplayStatus(inv) === selectedStatus.value
         return matchBank && matchStatus
@@ -72,26 +98,26 @@ const filteredInvestments = computed(() => {
 })
 
 const totalPrincipal = computed(() => {
-    return investments.value.reduce((sum, inv) => sum + (Number(inv.principal) || 0), 0)
+    return scopedInvestments.value.reduce((sum, inv) => sum + (Number(inv.principal) || 0), 0)
 })
 
 const totalAccruedROI = computed(() => {
-    return calculatePortfolioROI(investments.value, targetDate.value).toNumber()
+    return calculatePortfolioROI(scopedInvestments.value, targetDate.value).toNumber()
 })
 
 const cashLockInMetrics = computed(() => {
-    const totalPrincipal = investments.value.reduce((sum, inv) => sum + (Number(inv.principal) || 0), 0)
+    const totalPrincipalValue = scopedInvestments.value.reduce((sum, inv) => sum + (Number(inv.principal) || 0), 0)
     const today = dayjs()
     const daysAhead = Math.max(1, Number(liquidDays.value) || 1)
     const nextWeekStart = today.add(1, 'day').startOf('day')
     const nextWeekEnd = today.add(daysAhead, 'day').endOf('day')
 
-    const lockedPrincipal = investments.value.reduce((sum, inv) => {
+    const lockedPrincipal = scopedInvestments.value.reduce((sum, inv) => {
         const isLocked = inv.status === 'ACTIVE' && dayjs(inv.maturityDate).isAfter(today, 'day')
         return sum + (isLocked ? Number(inv.principal) || 0 : 0)
     }, 0)
 
-    const liquidNextWeek = investments.value.reduce(
+    const liquidNextWeek = scopedInvestments.value.reduce(
         (acc: { amount: number; count: number }, inv) => {
             const maturity = dayjs(inv.maturityDate)
             const isLiquidNextWeek = inv.status === 'ACTIVE' && maturity.isAfter(nextWeekStart) && maturity.isBefore(nextWeekEnd)
@@ -104,11 +130,11 @@ const cashLockInMetrics = computed(() => {
         { amount: 0, count: 0 }
     )
 
-    const lockedPercent = totalPrincipal ? (lockedPrincipal / totalPrincipal) * 100 : 0
-    const liquidPercent = totalPrincipal ? (liquidNextWeek.amount / totalPrincipal) * 100 : 0
+    const lockedPercent = totalPrincipalValue ? (lockedPrincipal / totalPrincipalValue) * 100 : 0
+    const liquidPercent = totalPrincipalValue ? (liquidNextWeek.amount / totalPrincipalValue) * 100 : 0
 
     return {
-        totalPrincipal,
+        totalPrincipal: totalPrincipalValue,
         lockedPrincipal,
         lockedPercent,
         liquidNextWeekAmount: liquidNextWeek.amount,
@@ -124,7 +150,12 @@ const clearFilters = () => {
 }
 
 const handleAddInvestment = async () => {
-    if (!newInvestment.value.bankId || !newInvestment.value.principal) return
+    // SECURITY: Force organisationId for subsidiary users
+    if (!isGroupScope.value) {
+        newInvestment.value.organisationId = user.organisationId
+    }
+
+    if (!newInvestment.value.organisationId || !newInvestment.value.bankId || !newInvestment.value.principal) return
     
     isSubmitting.value = true
     try {
@@ -139,6 +170,7 @@ const handleAddInvestment = async () => {
         showModal.value = false
         // Reset form
         newInvestment.value = {
+            organisationId: activeOrganisation.value?.type === 'SUBSIDIARY' ? activeOrganisation.value.id : '',
             bankId: '',
             principal: '',
             dailyRate: '',
@@ -181,6 +213,7 @@ const confirmTerminate = async () => {
                 <p class="text-sm text-gray-500">Manage your portfolio entries</p>
             </div>
             <button 
+                v-if="canDo('investment:create')"
                 @click="showModal = true"
                 class="btn-primary"
             >
@@ -190,8 +223,8 @@ const confirmTerminate = async () => {
         </div>
 
         <div class="grid grid-cols-1 gap-6">
-            <!-- Portfolio Totals -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Portfolio Totals (Hidden for restricted roles) -->
+            <div v-if="canDo('roi:view')" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="card">
                     <p class="text-xs text-white uppercase tracking-wide">Total Principal</p>
                     <p class="text-2xl font-bold text-gray-100 mt-2">
@@ -207,8 +240,8 @@ const confirmTerminate = async () => {
                     <p class="text-[10px] text-gray-400 mt-1">Portfolio to date</p>
                 </div>
             </div>
-            <!-- Cash Lock-in -->
-            <div class="card">
+            <!-- Cash Lock-in (Hidden for restricted roles) -->
+            <div v-if="canDo('liquidity:view')" class="card">
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <h2 class="text-lg font-semibold text-white">Cash Lock-in</h2>
@@ -290,6 +323,14 @@ const confirmTerminate = async () => {
                         </div>
                         
                         <form @submit.prevent="handleAddInvestment" class="space-y-4">
+                            <div v-if="activeOrganisation?.type === 'GROUP'">
+                                <label class="block text-sm font-medium text-gray-700">Subsidiary</label>
+                                <select v-model="newInvestment.organisationId" required class="mt-1 text-gray-700 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border">
+                                    <option value="" disabled>Select Subsidiary</option>
+                                    <option v-for="org in ORGANISATIONS.filter(o => o.type === 'SUBSIDIARY')" :key="org.id" :value="org.id">{{ org.name }}</option>
+                                </select>
+                            </div>
+
                             <div class="text-gray-700">
                                 <label class="block text-sm font-medium text-gray-700">Bank</label>
                                 <div class="flex gap-2">
@@ -297,7 +338,13 @@ const confirmTerminate = async () => {
                                         <option value="" disabled>Select Bank</option>
                                         <option v-for="bank in banks" :key="bank.id" :value="bank.id">{{ bank.name }}</option>
                                     </select>
-                                    <button type="button" @click="showBankModal = true" class="mt-1 inline-flex items-center p-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500" title="Add New Bank">
+                                    <button 
+                                        v-if="canDo('bank:create')"
+                                        type="button" 
+                                        @click="showBankModal = true" 
+                                        class="mt-1 inline-flex items-center p-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500" 
+                                        title="Add New Bank"
+                                    >
                                         <PlusIcon class="h-4 w-4" />
                                     </button>
                                 </div>

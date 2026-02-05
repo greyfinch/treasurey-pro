@@ -10,6 +10,49 @@ let BANKS = [
     { id: uuidv4(), name: 'First Bank' }
 ];
 
+export type OrgType = 'GROUP' | 'SUBSIDIARY';
+
+export interface Organisation {
+    id: string;
+    name: string;
+    type: OrgType;
+    parentId?: string | null;
+}
+
+export const ORGANISATIONS: Organisation[] = [
+    { id: 'org-holdco', name: 'Acme Holdings', type: 'GROUP', parentId: null },
+    { id: 'org-foods', name: 'Acme Foods', type: 'SUBSIDIARY', parentId: 'org-holdco' },
+    { id: 'org-transport', name: 'Acme Transport', type: 'SUBSIDIARY', parentId: 'org-holdco' },
+    { id: 'org-energy', name: 'Acme Energy', type: 'SUBSIDIARY', parentId: 'org-holdco' }
+];
+
+export type Role = 'GROUP_CFO' | 'GROUP_TREASURY_MANAGER' | 'SUB_FINANCE_MANAGER' | 'SUB_FINANCE_OFFICER' | 'AUDITOR';
+
+export interface User {
+    id: string;
+    name: string;
+    role: Role;
+    organisationId: string;
+}
+
+// Current logged in user (Mock)
+export let CURRENT_USER: User = {
+    id: 'user-1',
+    name: 'Obi Wan (Group CFO)',
+    role: 'GROUP_CFO',
+    organisationId: 'org-holdco'
+};
+
+export const MOCK_USERS = [
+    { username: 'cfo', password: 'password', id: 'user-1', name: 'Obi Wan (Group CFO)', role: 'GROUP_CFO' as Role, organisationId: 'org-holdco' },
+    { username: 'treasury', password: 'password', id: 'user-2', name: 'Yoda (Group Treasury)', role: 'GROUP_TREASURY_MANAGER' as Role, organisationId: 'org-holdco' },
+    { username: 'manager_foods', password: 'password', id: 'user-3', name: 'Anakin (Acme Foods Manager)', role: 'SUB_FINANCE_MANAGER' as Role, organisationId: 'org-foods' },
+    { username: 'officer_foods', password: 'password', id: 'user-4', name: 'Ahsoka (Acme Foods Officer)', role: 'SUB_FINANCE_OFFICER' as Role, organisationId: 'org-foods' },
+    { username: 'manager_transport', password: 'password', id: 'user-5', name: 'Mace Windu (Acme Transport Manager)', role: 'SUB_FINANCE_MANAGER' as Role, organisationId: 'org-transport' },
+    { username: 'auditor', password: 'password', id: 'user-6', name: 'Qui-Gon (Auditor)', role: 'AUDITOR' as Role, organisationId: 'org-holdco' }
+];
+
+
 const generateInvestments = () => {
     const investments: any[] = [];
     const today = dayjs();
@@ -18,6 +61,7 @@ const generateInvestments = () => {
     const inv1StartDate = today.subtract(45, 'day');
     investments.push({
         id: uuidv4(),
+        organisationId: 'org-foods',
         bankId: BANKS[0]!.id,
         bank: BANKS[0]!,
         principal: '50000000', // 50M
@@ -33,6 +77,7 @@ const generateInvestments = () => {
     const inv2StartDate = today.subtract(60, 'day');
     investments.push({
         id: uuidv4(),
+        organisationId: 'org-transport',
         bankId: BANKS[1]!.id,
         bank: BANKS[1]!,
         principal: '25000000', // 25M
@@ -48,6 +93,7 @@ const generateInvestments = () => {
     const inv3StartDate = today.subtract(20, 'day');
     investments.push({
         id: uuidv4(),
+        organisationId: 'org-energy',
         bankId: BANKS[2]!.id,
         bank: BANKS[2]!,
         principal: '100000000', // 100M
@@ -70,6 +116,7 @@ const generateInvestments = () => {
     const inv4StartDate = today.subtract(15, 'day');
     investments.push({
         id: uuidv4(),
+        organisationId: 'org-foods',
         bankId: BANKS[3]!.id,
         bank: BANKS[3]!,
         principal: '30000000', // 30M
@@ -85,6 +132,7 @@ const generateInvestments = () => {
     const inv5StartDate = today.subtract(5, 'day');
     investments.push({
         id: uuidv4(),
+        organisationId: 'org-transport',
         bankId: BANKS[4]!.id,
         bank: BANKS[4]!,
         principal: '75000000', // 75M
@@ -100,6 +148,7 @@ const generateInvestments = () => {
     const inv6StartDate = today.subtract(12, 'day');
     investments.push({
         id: uuidv4(),
+        organisationId: 'org-energy',
         bankId: BANKS[0]!.id,
         bank: BANKS[0]!,
         principal: '20000000', // 20M
@@ -115,6 +164,7 @@ const generateInvestments = () => {
     const inv7StartDate = today.subtract(90, 'day');
     investments.push({
         id: uuidv4(),
+        organisationId: 'org-foods',
         bankId: BANKS[1]!.id,
         bank: BANKS[1]!,
         principal: '40000000', // 40M
@@ -130,6 +180,7 @@ const generateInvestments = () => {
     const inv8StartDate = today.subtract(25, 'day');
     investments.push({
         id: uuidv4(),
+        organisationId: 'org-transport',
         bankId: BANKS[2]!.id,
         bank: BANKS[2]!,
         principal: '60000000', // 60M
@@ -151,6 +202,7 @@ const generateInvestments = () => {
     const inv9StartDate = today.subtract(50, 'day');
     investments.push({
         id: uuidv4(),
+        organisationId: 'org-energy',
         bankId: BANKS[3]!.id,
         bank: BANKS[3]!,
         principal: '15000000', // 15M
@@ -166,6 +218,7 @@ const generateInvestments = () => {
     const inv10StartDate = today.subtract(8, 'day');
     investments.push({
         id: uuidv4(),
+        organisationId: 'org-foods',
         bankId: BANKS[4]!.id,
         bank: BANKS[4]!,
         principal: '90000000', // 90M
@@ -182,7 +235,41 @@ const generateInvestments = () => {
 
 const MOCK_INVESTMENTS = generateInvestments();
 
+export interface AuditLog {
+    id: string;
+    userId: string;
+    userName: string;
+    userRole: Role;
+    organisationId: string;
+    action: string;
+    details: any;
+    timestamp: Date;
+}
+
+const AUDIT_LOGS: AuditLog[] = [];
+
+const logAction = (action: string, details: any) => {
+    AUDIT_LOGS.push({
+        id: uuidv4(),
+        userId: CURRENT_USER.id,
+        userName: CURRENT_USER.name,
+        userRole: CURRENT_USER.role,
+        organisationId: CURRENT_USER.organisationId,
+        action,
+        details,
+        timestamp: new Date()
+    });
+};
+
 export const mockService = {
+    getOrganisations: async (): Promise<Organisation[]> => {
+        return new Promise((resolve) => resolve(ORGANISATIONS));
+    },
+
+    getCurrentUser: async (): Promise<User> => {
+        return new Promise((resolve) => resolve(CURRENT_USER));
+    },
+
     getInvestments: async (): Promise<any[]> => {
         return new Promise((resolve) => {
             setTimeout(() => {
@@ -207,6 +294,13 @@ export const mockService = {
     addInvestment: async (investment: any): Promise<any> => {
         return new Promise((resolve) => {
             setTimeout(() => {
+                // Backend-side Security Verification
+                if (CURRENT_USER.role !== 'GROUP_CFO' &&
+                    CURRENT_USER.role !== 'GROUP_TREASURY_MANAGER' &&
+                    CURRENT_USER.organisationId !== investment.organisationId) {
+                    throw new Error('Unauthorised: You can only create investments for your own organisation.');
+                }
+
                 const newInvestment = {
                     ...investment,
                     id: uuidv4(),
@@ -215,6 +309,7 @@ export const mockService = {
                     rollovers: []
                 };
                 MOCK_INVESTMENTS.push(newInvestment);
+                logAction('investment:create', newInvestment);
                 resolve(newInvestment);
             }, 500);
         });
@@ -233,6 +328,7 @@ export const mockService = {
                     id: uuidv4(),
                 };
                 inv.withdrawals.push(newWithdrawal);
+                logAction('withdrawal:create', { investmentId, ...newWithdrawal });
                 resolve(newWithdrawal);
             }, 500);
         });
@@ -251,6 +347,7 @@ export const mockService = {
                     id: uuidv4(),
                 };
                 inv.rollovers.push(newRollover);
+                logAction('rollover:create', { investmentId, ...newRollover });
                 resolve(newRollover);
             }, 500);
         });
@@ -265,6 +362,7 @@ export const mockService = {
                     return;
                 }
                 inv.status = 'TERMINATED';
+                logAction('investment:terminate', { investmentId });
                 resolve(inv);
             }, 500);
         });
@@ -274,6 +372,13 @@ export const mockService = {
     addBank: async (bank: { name: string }): Promise<any> => {
         return new Promise((resolve) => {
             setTimeout(() => {
+                // Backend-side Security Verification
+                if (CURRENT_USER.role !== 'GROUP_CFO' &&
+                    CURRENT_USER.role !== 'GROUP_TREASURY_MANAGER' &&
+                    CURRENT_USER.role !== 'AUDITOR') {
+                    throw new Error('Unauthorised: Only Group roles can register new banks.');
+                }
+
                 const newBank = {
                     id: uuidv4(),
                     name: bank.name
@@ -309,6 +414,32 @@ export const mockService = {
                 }
                 BANKS.splice(index, 1);
                 resolve();
+            }, 500);
+        });
+    },
+
+    getAuditLogs: async (): Promise<AuditLog[]> => {
+        return new Promise((resolve) => resolve(AUDIT_LOGS));
+    },
+
+    setMockRole: (role: Role, orgId: string) => {
+        CURRENT_USER.role = role;
+        CURRENT_USER.organisationId = orgId;
+    },
+
+    login: async (username: string, password: string): Promise<User | null> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const user = MOCK_USERS.find(u => u.username === username && u.password === password);
+                if (user) {
+                    CURRENT_USER.id = user.id;
+                    CURRENT_USER.name = user.name;
+                    CURRENT_USER.role = user.role;
+                    CURRENT_USER.organisationId = user.organisationId;
+                    resolve(CURRENT_USER);
+                } else {
+                    resolve(null);
+                }
             }, 500);
         });
     }
