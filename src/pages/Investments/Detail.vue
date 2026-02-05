@@ -564,12 +564,12 @@ const handleTerminate = async () => {
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <span class="text-gray-500 sm:text-sm">₦</span>
                                 </div>
-                                <input type="number" v-model="withdrawalForm.amount" required class="focus:ring-expense-500 focus:border-expense-500 block w-full pl-7 sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="0.00">
+                                <input type="number" v-model="withdrawalForm.amount" required class="focus:ring-expense-500 text-gray-900 focus:border-expense-500 block w-full pl-7 sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="0.00">
                             </div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Date</label>
-                            <input type="date" v-model="withdrawalForm.withdrawalDate" required class="mt-1 focus:ring-expense-500 focus:border-expense-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border">
+                            <input type="date" v-model="withdrawalForm.withdrawalDate" required class="mt-1 focus:ring-expense-500 text-gray-900 focus:border-expense-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Fee (Optional)</label>
@@ -577,7 +577,7 @@ const handleTerminate = async () => {
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <span class="text-gray-500 sm:text-sm">₦</span>
                                 </div>
-                                <input type="number" v-model="withdrawalForm.fee" class="focus:ring-expense-500 focus:border-expense-500 block w-full pl-7 sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="0.00">
+                                <input type="number" v-model="withdrawalForm.fee" class="focus:ring-expense-500 text-gray-900 focus:border-expense-500 block w-full pl-7 sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="0.00">
                             </div>
                         </div>
                         <div class="mt-5 sm:mt-6">
@@ -610,12 +610,12 @@ const handleTerminate = async () => {
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <span class="text-gray-500 sm:text-sm">₦</span>
                                 </div>
-                                <input type="number" v-model="rolloverForm.amount" required class="focus:ring-primary-500 focus:border-primary-500 block w-full pl-7 sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="0.00">
+                                <input type="number" v-model="rolloverForm.amount" required class="focus:ring-primary-500 text-gray-900 focus:border-primary-500 block w-full pl-7 sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="0.00">
                             </div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Date</label>
-                            <input type="date" v-model="rolloverForm.date" required class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border">
+                            <input type="date" v-model="rolloverForm.date" required class="mt-1 focus:ring-primary-500 text-gray-900 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border">
                         </div>
                         <div class="mt-5 sm:mt-6">
                             <button type="submit" :disabled="isSubmitting" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:text-sm disabled:opacity-50">
