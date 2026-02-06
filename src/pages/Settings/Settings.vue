@@ -47,18 +47,18 @@ const activeComponent = computed(() => {
 
 <template>
     <div class="min-h-screen">
-        <header class="mb-8">
-            <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <Cog6ToothIcon class="w-7 h-7 text-gray-400" />
+        <header class="mb-8 font-primary">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Cog6ToothIcon class="w-7 h-7 text-gray-400 dark:text-gray-500" />
                 Account Settings
             </h1>
-            <p class="text-gray-500 text-sm mt-1">Manage your system preferences and security</p>
+            <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Manage your system preferences and security</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <!-- Sidebar -->
             <aside class="lg:col-span-1">
-                <nav class="space-y-1 bg-white p-2 rounded-xl border border-gray-100 shadow-sm sticky top-24">
+                <nav class="space-y-1 bg-white dark:bg-gray-800 p-2 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm sticky top-24 transition-colors">
                     <button
                         v-for="tab in tabs"
                         :key="tab.id"
@@ -66,8 +66,8 @@ const activeComponent = computed(() => {
                         :class="[
                             'w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-all',
                             activeTab === tab.id 
-                                ? 'bg-primary-50 text-primary-700 shadow-sm' 
-                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 shadow-sm' 
+                                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'
                         ]"
                     >
                         <component :is="tab.icon" class="w-5 h-5" />
@@ -78,7 +78,7 @@ const activeComponent = computed(() => {
 
             <!-- Content Area -->
             <main class="lg:col-span-3">
-                <div class="bg-gray-50/50 rounded-2xl p-6 lg:p-8 min-h-[600px] border border-dashed border-gray-200">
+                <div class="bg-gray-50/50 dark:bg-gray-900/20 rounded-2xl p-6 lg:p-8 min-h-[600px] border border-dashed border-gray-200 dark:border-gray-700 transition-colors">
                     <transition 
                         name="fade" 
                         mode="out-in"

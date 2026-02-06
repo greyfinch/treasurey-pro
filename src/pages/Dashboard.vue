@@ -26,6 +26,8 @@ const targetDate = ref(new Date())
 const selectedBankId = ref('')
 const selectedStatus = ref('')
 const selectedCurrency = ref('')
+const maturityDateStart = ref('')
+const maturityDateEnd = ref('')
 const currencies = ref<any[]>([])
 
 
@@ -60,7 +62,17 @@ const filteredInvestments = computed(() => {
         const matchBank = !selectedBankId.value || inv.bankId === selectedBankId.value
         const matchStatus = !selectedStatus.value || inv.status === selectedStatus.value
         const matchCurrency = !selectedCurrency.value || inv.currency === selectedCurrency.value
-        return matchBank && matchStatus && matchCurrency
+        
+        // Maturity Date Range Filter
+        let matchDateRange = true
+        if (maturityDateStart.value) {
+            matchDateRange = matchDateRange && !dayjs(inv.maturityDate).isBefore(dayjs(maturityDateStart.value), 'day')
+        }
+        if (maturityDateEnd.value) {
+            matchDateRange = matchDateRange && !dayjs(inv.maturityDate).isAfter(dayjs(maturityDateEnd.value), 'day')
+        }
+
+        return matchBank && matchStatus && matchCurrency && matchDateRange
     })
 })
 
@@ -150,8 +162,8 @@ const clearFilters = () => {
         <!-- Header -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">Treasury Dashboard</h1>
-                <p class="text-sm text-gray-500">Overview of your investment portfolio performance</p>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Treasury Dashboard</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Overview of your investment portfolio performance</p>
             </div>
             <div class="flex items-center gap-3">
                  <DateFilter v-model="targetDate" />
@@ -179,12 +191,12 @@ const clearFilters = () => {
         </div>
 
         <!-- Currency Breakdown -->
-        <div class="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
-            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Portfolio Currency Breakdown</h4>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm transition-colors">
+            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Portfolio Currency Breakdown</h4>
             <div class="flex flex-wrap gap-4">
-                <div v-for="item in currencyBreakdown" :key="item.code" class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-100">
-                    <span class="text-sm font-bold text-gray-700">{{ item.code }}:</span>
-                    <span class="text-sm text-gray-600">{{ formatCurrency(item.principal, item.code) }}</span>
+                <div v-for="item in currencyBreakdown" :key="item.code" class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
+                    <span class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ item.code }}:</span>
+                    <span class="text-sm text-gray-600 dark:text-gray-400">{{ formatCurrency(item.principal, item.code) }}</span>
                 </div>
             </div>
         </div>
@@ -193,13 +205,13 @@ const clearFilters = () => {
             <!-- Main Content Area -->
             <div class="lg:col-span-3 space-y-6">
                  <!-- FX Impact Note -->
-                 <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3">
-                    <div class="p-2 bg-blue-100 rounded-lg h-fit">
-                        <ArrowTrendingUpIcon class="w-5 h-5 text-blue-600" />
+                 <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-4 flex gap-3 transition-colors">
+                    <div class="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg h-fit">
+                        <ArrowTrendingUpIcon class="w-5 h-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                        <h4 class="text-sm font-semibold text-blue-900">Multi-Currency & FX Impact</h4>
-                        <p class="text-xs text-blue-700 mt-1">
+                        <h4 class="text-sm font-semibold text-blue-900 dark:text-blue-100">Multi-Currency & FX Impact</h4>
+                        <p class="text-xs text-blue-700 dark:text-blue-300 mt-1">
                             Your portfolio is spread across {{ currencyBreakdown.length }} currencies. All aggregated totals are displayed in your reporting currency ({{ baseCurrency }}).
                             ROI includes interest earned in native currency and FX gains/losses upon conversion.
                         </p>
@@ -207,9 +219,9 @@ const clearFilters = () => {
                 </div>
 
                 <!-- Chart -->
-                <div class="card bg-white">
+                <div class="card bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-base font-semibold text-gray-900 flex items-center gap-2">
+                        <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                              <ArrowTrendingUpIcon class="w-5 h-5 text-primary-500" />
                              ROI Growth Trajectory
                         </h3>
@@ -222,41 +234,41 @@ const clearFilters = () => {
                 </div>
 
                 <!-- Subsidiary Breakdown (Only in Group View) -->
-                <div v-if="activeOrganisation?.type === 'GROUP'" class="card p-0 overflow-hidden">
-                    <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                        <h3 class="font-semibold text-gray-900 flex items-center gap-2">
+                <div v-if="activeOrganisation?.type === 'GROUP'" class="card p-0 overflow-hidden bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
+                    <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50">
+                        <h3 class="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                             <BuildingOffice2Icon class="w-5 h-5 text-primary-500" />
                             Subsidiary Performance
                         </h3>
                     </div>
                     <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-50 dark:bg-gray-900/30">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subsidiary</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Invested ({{ baseCurrency }})</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Accrued ROI</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Allocation</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Subsidiary</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Invested ({{ baseCurrency }})</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Accrued ROI</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Allocation</th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                <tr v-for="sub in subsidiaryBreakdown" :key="sub.id" class="hover:bg-gray-50 transition-colors">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        <router-link :to="`/subsidiaries/${sub.id}`" class="text-primary-600 hover:text-primary-800 hover:underline">
+                            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                <tr v-for="sub in subsidiaryBreakdown" :key="sub.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                        <router-link :to="`/subsidiaries/${sub.id}`" class="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 hover:underline">
                                             {{ sub.name }}
                                         </router-link>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600">{{ formatCurrency(sub.principal, baseCurrency) }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-primary-600 font-semibold">{{ formatCurrency(sub.roi, baseCurrency) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-300">{{ formatCurrency(sub.principal, baseCurrency) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-primary-600 dark:text-primary-400 font-semibold">{{ formatCurrency(sub.roi, baseCurrency) }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
                                         <div class="flex items-center justify-end gap-2">
-                                            <div class="w-24 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                            <div class="w-24 bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
                                                 <div 
-                                                    class="bg-primary-500 h-full rounded-full" 
+                                                    class="bg-primary-500 dark:bg-primary-600 h-full rounded-full" 
                                                     :style="{ width: `${(sub.principal / totalPrincipalBase) * 100}%` }"
                                                 ></div>
                                             </div>
-                                            <span class="text-xs text-gray-500 w-8">{{ ((sub.principal / totalPrincipalBase) * 100).toFixed(0) }}%</span>
+                                            <span class="text-xs text-gray-500 dark:text-gray-400 w-8">{{ ((sub.principal / totalPrincipalBase) * 100).toFixed(0) }}%</span>
                                         </div>
                                     </td>
                                 </tr>
@@ -266,10 +278,10 @@ const clearFilters = () => {
                 </div>
 
                 <!-- Table -->
-                <div class="card p-0 overflow-hidden">
-                    <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                        <h3 class="font-semibold text-gray-900">Active Investments</h3>
-                         <span class="text-xs font-medium px-2 py-1 bg-white rounded border border-gray-200 text-gray-500">
+                <div class="card p-0 overflow-hidden bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
+                    <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50">
+                        <h3 class="font-semibold text-gray-900 dark:text-white">Active Investments</h3>
+                         <span class="text-xs font-medium px-2 py-1 bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
                             {{ filteredInvestments.length }} records
                         </span>
                     </div>
@@ -293,23 +305,25 @@ const clearFilters = () => {
                     v-model:selected-bank-id="selectedBankId"
                     v-model:selected-status="selectedStatus"
                     v-model:selected-currency="selectedCurrency"
+                    v-model:maturity-date-start="maturityDateStart"
+                    v-model:maturity-date-end="maturityDateEnd"
                     @clear="clearFilters"
                 />
 
                 
                 <!-- Summary Stats helper -->
-                 <div class="mt-4 bg-primary-50 rounded-xl p-4 border border-primary-100">
-                    <h4 class="text-xs font-semibold text-primary-800 uppercase tracking-wider mb-2">Next Maturity</h4>
+                 <div class="mt-4 bg-primary-50 dark:bg-primary-900/20 rounded-xl p-4 border border-primary-100 dark:border-primary-800 transition-colors">
+                    <h4 class="text-xs font-semibold text-primary-800 dark:text-primary-300 uppercase tracking-wider mb-2">Next Maturity</h4>
                     <div class="flex items-center gap-3" v-if="nextMaturityInvestment">
-                        <div class="bg-white p-2 rounded-lg text-primary-600 font-bold text-lg border border-primary-100">
+                        <div class="bg-white dark:bg-gray-900 p-2 rounded-lg text-primary-600 dark:text-primary-400 font-bold text-lg border border-primary-100 dark:border-primary-800 transition-colors">
                             {{ dayjs(nextMaturityInvestment.maturityDate).format('DD') }}
                         </div>
                         <div>
-                            <p class="text-sm font-medium text-gray-900">{{ dayjs(nextMaturityInvestment.maturityDate).format('MMMM YYYY') }}</p>
-                            <p class="text-xs text-gray-500">{{ nextMaturityInvestment.bank.name }} ({{ nextMaturityInvestment.currency }})</p>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ dayjs(nextMaturityInvestment.maturityDate).format('MMMM YYYY') }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ nextMaturityInvestment.bank.name }} ({{ nextMaturityInvestment.currency }})</p>
                         </div>
                     </div>
-                    <div v-else class="text-sm text-gray-500 italic">No active investments found.</div>
+                    <div v-else class="text-sm text-gray-500 dark:text-gray-400 italic">No active investments found.</div>
                 </div>
             </div>
         </div>

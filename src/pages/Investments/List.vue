@@ -246,8 +246,8 @@ const confirmTerminate = async () => {
         <!-- Header -->
         <div class="flex justify-between items-center">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">Investments</h1>
-                <p class="text-sm text-gray-500">Manage your portfolio entries</p>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Investments</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Manage your portfolio entries</p>
             </div>
             <button 
                 v-if="canDo('investment:create')"
@@ -269,14 +269,14 @@ const confirmTerminate = async () => {
                 leave-from-class="opacity-100 translate-y-0"
                 leave-to-class="opacity-0 -translate-y-4"
             >
-                <div v-if="maturityDateStart || maturityDateEnd" class="bg-primary-50 border border-primary-100 rounded-xl p-4 flex items-center justify-between shadow-sm">
+                <div v-if="maturityDateStart || maturityDateEnd" class="bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-800 rounded-xl p-4 flex items-center justify-between shadow-sm transition-colors">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center">
-                            <CalendarIcon class="w-6 h-6 text-primary-600" />
+                        <div class="w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center">
+                            <CalendarIcon class="w-6 h-6 text-primary-600 dark:text-primary-400" />
                         </div>
                         <div>
-                            <p class="text-sm font-bold text-primary-900">Filtering by Maturity Date Range</p>
-                            <p class="text-xs text-primary-600 font-medium">
+                            <p class="text-sm font-bold text-primary-900 dark:text-primary-100">Filtering by Maturity Date Range</p>
+                            <p class="text-xs text-primary-600 dark:text-primary-400 font-medium">
                                 <span v-if="maturityDateStart && maturityDateEnd">
                                     From {{ dayjs(maturityDateStart).format('MMM D, YYYY') }} to {{ dayjs(maturityDateEnd).format('MMM D, YYYY') }}
                                 </span>
@@ -291,68 +291,68 @@ const confirmTerminate = async () => {
                     </div>
                     <button 
                         @click="clearFilters"
-                        class="p-2 hover:bg-primary-100 rounded-lg transition-colors group"
+                        class="p-2 hover:bg-primary-100 dark:hover:bg-primary-900/40 rounded-lg transition-colors group"
                         title="Clear filter"
                     >
-                        <XMarkIcon class="w-5 h-5 text-primary-400 group-hover:text-primary-600" />
+                        <XMarkIcon class="w-5 h-5 text-primary-400 dark:text-primary-500 group-hover:text-primary-600 dark:group-hover:text-primary-300" />
                     </button>
                 </div>
             </transition>
 
             <!-- Portfolio Totals (Hidden for restricted roles) -->
             <div v-if="canDo('roi:view')" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="card">
-                    <p class="text-xs text-white uppercase tracking-wide">Total Principal</p>
-                    <p class="text-2xl font-bold text-gray-100 mt-2">
+                <div class="card bg-gray-900 dark:bg-gray-800 border-gray-800 dark:border-gray-700">
+                    <p class="text-xs text-gray-400 uppercase tracking-wide">Total Principal</p>
+                    <p class="text-2xl font-bold text-white mt-2">
                         {{ formatCurrency(totalPrincipal) }}
                     </p>
-                    <p class="text-[10px] text-gray-400 mt-1">Across all investments</p>
+                    <p class="text-[10px] text-gray-500 mt-1">Across all investments</p>
                 </div>
-                <div class="card">
-                    <p class="text-xs text-gray-500 uppercase tracking-wide">Total Accrued ROI</p>
-                    <p class="text-2xl font-bold text-money-600 mt-2">
+                <div class="card bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Accrued ROI</p>
+                    <p class="text-2xl font-bold text-money-600 dark:text-money-400 mt-2">
                         {{ formatCurrency(totalAccruedROI) }}
                     </p>
-                    <p class="text-[10px] text-gray-400 mt-1">Portfolio to date</p>
+                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Portfolio to date</p>
                 </div>
             </div>
             <!-- Cash Lock-in (Hidden for restricted roles) -->
-            <div v-if="canDo('liquidity:view')" class="card">
+            <div v-if="canDo('liquidity:view')" class="card bg-gray-900 dark:bg-gray-800 border-gray-800 dark:border-gray-700 overflow-hidden">
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <h2 class="text-lg font-semibold text-white">Cash Lock-in</h2>
-                        <p class="text-xs text-gray-100">Liquidity outlook based on maturity dates</p>
+                        <p class="text-xs text-gray-400">Liquidity outlook based on maturity dates</p>
                     </div>
-                    <span class="text-[10px] uppercase tracking-wider text-gray-400">Today & Next {{ cashLockInMetrics.daysAhead }} Days</span>
+                    <span class="text-[10px] uppercase tracking-wider text-gray-500">Today & Next {{ cashLockInMetrics.daysAhead }} Days</span>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="rounded-lg border border-gray-100 p-4 bg-white">
-                        <p class="text-[11px] text-gray-500 uppercase tracking-wide">Locked today</p>
-                        <p class="text-2xl font-bold text-indigo-900">
+                    <div class="rounded-lg border border-gray-800 dark:border-gray-700 p-4 bg-gray-800/50 dark:bg-gray-900/50">
+                        <p class="text-[11px] text-gray-400 uppercase tracking-wide">Locked today</p>
+                        <p class="text-2xl font-bold text-indigo-400">
                             {{ cashLockInMetrics.lockedPercent.toFixed(1) }}%
                         </p>
-                        <p class="text-xs text-gray-400 mt-1">
+                        <p class="text-xs text-gray-500 mt-1">
                             {{ formatCurrency(cashLockInMetrics.lockedPrincipal) }} of {{ formatCurrency(cashLockInMetrics.totalPrincipal) }}
                         </p>
                     </div>
-                    <div class="rounded-lg border border-gray-100 p-4 bg-white">
+                    <div class="rounded-lg border border-gray-800 dark:border-gray-700 p-4 bg-gray-800/50 dark:bg-gray-900/50">
                         <div class="flex items-center justify-between gap-3">
-                            <p class="text-[11px] text-gray-500 uppercase tracking-wide">Becomes liquid in</p>
+                            <p class="text-[11px] text-gray-400 uppercase tracking-wide">Becomes liquid in</p>
                             <div class="flex items-center gap-2">
                                 <input
                                     v-model.number="liquidDays"
                                     type="number"
                                     min="1"
-                                    class="w-16 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-700"
+                                    class="w-16 rounded-md border border-gray-700 dark:border-gray-600 bg-gray-900 dark:bg-gray-950 px-2 py-1 text-xs text-gray-300 transition-colors"
                                 >
                                 <span class="text-[11px] text-gray-500">days</span>
                             </div>
                         </div>
-                        <p class="text-2xl font-bold text-green-700">
+                        <p class="text-2xl font-bold text-green-400">
                             {{ formatCurrency(cashLockInMetrics.liquidNextWeekAmount) }}
                         </p>
-                        <p class="text-xs text-gray-400 mt-1">
+                        <p class="text-xs text-gray-500 mt-1">
                             {{ cashLockInMetrics.liquidPercent.toFixed(1) }}% of portfolio • {{ cashLockInMetrics.liquidNextWeekCount }} investments
                         </p>
                     </div>
@@ -361,8 +361,8 @@ const confirmTerminate = async () => {
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <!-- Main List -->
                 <div class="lg:col-span-3 space-y-4">
-                     <!-- Filters -->
-                    <div class="card p-0 overflow-hidden">
+                     <!-- Table -->
+                    <div class="card p-0 overflow-hidden bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
                         <InvestmentsTable 
                             :investments="filteredInvestments"
                             :target-date="targetDate"
@@ -389,33 +389,33 @@ const confirmTerminate = async () => {
         </div>
 
         <!-- Add Modal -->
-        <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto bg-gray-500/90 text-gray" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto bg-gray-500/90 dark:bg-gray-950/90 transition-colors" aria-labelledby="modal-title" role="dialog" aria-modal="true">
             <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
 
                 <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border dark:border-gray-700">
+                    <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4 transition-colors">
                         <div class="flex justify-between items-start mb-4">
-                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">New Investment</h3>
-                            <button @click="showModal = false" class="text-gray-400 hover:text-gray-500">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">New Investment</h3>
+                            <button @click="showModal = false" class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors">
                                 <XMarkIcon class="h-6 w-6" />
                             </button>
                         </div>
                         
                         <form @submit.prevent="handleAddInvestment" class="space-y-4">
                             <div v-if="activeOrganisation?.type === 'GROUP'">
-                                <label class="block text-sm font-medium text-gray-700">Subsidiary</label>
-                                <select v-model="newInvestment.organisationId" required class="mt-1 text-gray-700 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Subsidiary</label>
+                                <select v-model="newInvestment.organisationId" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors">
                                     <option value="" disabled>Select Subsidiary</option>
                                     <option v-for="org in ORGANISATIONS.filter(o => o.type === 'SUBSIDIARY')" :key="org.id" :value="org.id">{{ org.name }}</option>
                                 </select>
                             </div>
 
-                            <div class="text-gray-700">
-                                <label class="block text-sm font-medium text-gray-700">Bank</label>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Bank</label>
                                 <div class="flex gap-2">
-                                    <select v-model="newInvestment.bankId" required class="mt-1 text-gray-700 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border">
+                                    <select v-model="newInvestment.bankId" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors">
                                         <option value="" disabled>Select Bank</option>
                                         <option v-for="bank in banks" :key="bank.id" :value="bank.id">{{ bank.name }}</option>
                                     </select>
@@ -423,7 +423,7 @@ const confirmTerminate = async () => {
                                         v-if="canDo('bank:create')"
                                         type="button" 
                                         @click="showBankModal = true" 
-                                        class="mt-1 inline-flex items-center p-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500" 
+                                        class="mt-1 inline-flex items-center p-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors" 
                                         title="Add New Bank"
                                     >
                                         <PlusIcon class="h-4 w-4" />
@@ -432,8 +432,8 @@ const confirmTerminate = async () => {
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Currency</label>
-                                <select v-model="newInvestment.currency" required class="mt-1 text-gray-700 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Currency</label>
+                                <select v-model="newInvestment.currency" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors">
                                     <option value="NGN">NGN - Nigerian Naira</option>
                                     <option value="USD">USD - US Dollar</option>
                                     <option value="EUR">EUR - Euro</option>
@@ -442,38 +442,38 @@ const confirmTerminate = async () => {
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Principal Amount</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Principal Amount</label>
                                 <div class="mt-1 relative rounded-md shadow-sm">
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <span class="text-gray-500 sm:text-sm">{{ newInvestment.currency === 'NGN' ? '₦' : '$' }}</span>
+                                        <span class="text-gray-500 dark:text-gray-400 sm:text-sm">{{ newInvestment.currency === 'NGN' ? '₦' : '$' }}</span>
                                     </div>
-                                    <input type="number" v-model="newInvestment.principal" required class="focus:ring-primary-500 text-gray-700 focus:border-primary-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="0.00">
+                                    <input type="number" v-model="newInvestment.principal" required class="focus:ring-primary-500 focus:border-primary-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors" placeholder="0.00">
                                 </div>
                             </div>
 
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Daily Interest Rate</label>
-                                <input type="number" step="0.00001" v-model="newInvestment.dailyRate" required class="mt-1 text-gray-700 focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border" placeholder="0.00045">
-                                <p class="mt-1 text-xs text-gray-500">e.g. 0.00045 for ~16.4% APY</p>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Daily Interest Rate</label>
+                                <input type="number" step="0.00001" v-model="newInvestment.dailyRate" required class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors" placeholder="0.00045">
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">e.g. 0.00045 for ~16.4% APY</p>
                             </div>
 
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700">Start Date</label>
-                                    <input type="date" v-model="newInvestment.startDate" required class="mt-1  text-gray-700 focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Start Date</label>
+                                    <input type="date" v-model="newInvestment.startDate" required class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors [color-scheme:light] dark:[color-scheme:dark]">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700">Maturity Date</label>
-                                    <input type="date" v-model="newInvestment.maturityDate" required class="mt-1 text-gray-700 focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Maturity Date</label>
+                                    <input type="date" v-model="newInvestment.maturityDate" required class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors [color-scheme:light] dark:[color-scheme:dark]">
                                 </div>
                             </div>
                             
                             <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
-                                <button type="submit" :disabled="isSubmitting" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:col-start-2 sm:text-sm disabled:opacity-50">
+                                <button type="submit" :disabled="isSubmitting" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:col-start-2 sm:text-sm disabled:opacity-50 transition-colors">
                                     {{ isSubmitting ? 'Adding...' : 'Add Investment' }}
                                 </button>
-                                <button type="button" @click="showModal = false" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:col-start-1 sm:text-sm">
+                                <button type="button" @click="showModal = false" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:col-start-1 sm:text-sm transition-colors">
                                     Cancel
                                 </button>
                             </div>
@@ -491,35 +491,35 @@ const confirmTerminate = async () => {
         />
 
         <!-- Terminate Confirmation Modal -->
-        <div v-if="showTerminateModal" class="fixed inset-0 z-50 overflow-y-auto bg-gray-500/90" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div v-if="showTerminateModal" class="fixed inset-0 z-50 overflow-y-auto bg-gray-500/90 dark:bg-gray-950/90 transition-colors" aria-labelledby="modal-title" role="dialog" aria-modal="true">
             <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
                 <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
-                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full border dark:border-gray-700">
+                    <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4 transition-colors">
                         <div class="sm:flex sm:items-start">
-                            <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                                <svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 sm:mx-0 sm:h-10 sm:w-10">
+                                <svg class="h-6 w-6 text-red-600 dark:text-red-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                 </svg>
                             </div>
                             <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                                <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
                                     Terminate Investment
                                 </h3>
                                 <div class="mt-2">
-                                    <p class="text-sm text-gray-500">
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">
                                         Are you sure you want to terminate this investment? This action will change the status to TERMINATED and cannot be undone.
                                     </p>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <div class="bg-gray-50 dark:bg-gray-900/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t dark:border-gray-700 transition-colors">
                         <button 
                             type="button" 
                             @click="confirmTerminate" 
                             :disabled="isSubmitting"
-                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 transition-colors"
                         >
                             {{ isSubmitting ? 'Terminating...' : 'Terminate' }}
                         </button>
@@ -527,7 +527,7 @@ const confirmTerminate = async () => {
                             type="button" 
                             @click="showTerminateModal = false" 
                             :disabled="isSubmitting"
-                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
                         >
                             Cancel
                         </button>

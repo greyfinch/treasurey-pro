@@ -17,6 +17,8 @@ import dayjs from 'dayjs'
 import { formatCurrency } from '../utils/dateHelpers'
 import { calculatePortfolioROI } from '../utils/roi'
 
+import { useTheme } from '../composables/useTheme'
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -35,6 +37,8 @@ const props = defineProps<{
   fxRates?: any[]
 }>()
 
+const { isDark } = useTheme()
+
 const chartData = computed(() => {
   const days = props.days || 30
   const labels = []
@@ -43,7 +47,6 @@ const chartData = computed(() => {
   const fxRates = props.fxRates || []
   
   // Generate data for the last N days up to today + N days projection
-  // Let's show past 30 days and future 30 days
   const today = dayjs()
   const start = today.subtract(days, 'day')
   const end = today.add(days, 'day')
@@ -56,7 +59,6 @@ const chartData = computed(() => {
     current = current.add(1, 'day')
   }
 
-  
   return {
     labels,
     datasets: [
@@ -65,8 +67,13 @@ const chartData = computed(() => {
         backgroundColor: (context: any) => {
           const ctx = context.chart.ctx;
           const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-          gradient.addColorStop(0, 'rgba(14, 165, 233, 0.5)'); // Primary-500
-          gradient.addColorStop(1, 'rgba(14, 165, 233, 0.0)');
+          if (isDark.value) {
+            gradient.addColorStop(0, 'rgba(14, 165, 233, 0.3)');
+            gradient.addColorStop(1, 'rgba(14, 165, 233, 0.0)');
+          } else {
+            gradient.addColorStop(0, 'rgba(14, 165, 233, 0.5)');
+            gradient.addColorStop(1, 'rgba(14, 165, 233, 0.0)');
+          }
           return gradient;
         },
         borderColor: '#0ea5e9',
@@ -81,7 +88,7 @@ const chartData = computed(() => {
   }
 })
 
-const options: ChartOptions<'line'> = {
+const options = computed<ChartOptions<'line'>>(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -91,6 +98,13 @@ const options: ChartOptions<'line'> = {
     tooltip: {
       mode: 'index',
       intersect: false,
+      backgroundColor: isDark.value ? '#1f2937' : '#ffffff',
+      titleColor: isDark.value ? '#ffffff' : '#111827',
+      bodyColor: isDark.value ? '#d1d5db' : '#374151',
+      borderColor: isDark.value ? '#374151' : '#e5e7eb',
+      borderWidth: 1,
+      padding: 12,
+      cornerRadius: 8,
       callbacks: {
         label: (context: any) => formatCurrency(context.raw, props.baseCurrency || 'NGN')
       }
@@ -103,12 +117,12 @@ const options: ChartOptions<'line'> = {
       },
       ticks: {
         maxTicksLimit: 8,
-        color: '#9ca3af'
+        color: isDark.value ? '#9ca3af' : '#6b7280'
       }
     },
     y: {
       grid: {
-        color: '#f3f4f6'
+        color: isDark.value ? '#374151' : '#f3f4f6'
       },
       ticks: {
         callback: (value: any) => {
@@ -117,7 +131,7 @@ const options: ChartOptions<'line'> = {
           if (value >= 1000) return `${symbol}${(value / 1000).toFixed(1)}k`
           return `${symbol}${value}`
         },
-        color: '#9ca3af'
+        color: isDark.value ? '#9ca3af' : '#6b7280'
       }
     }
   },
@@ -126,7 +140,7 @@ const options: ChartOptions<'line'> = {
       axis: 'x',
       intersect: false
   }
-}
+}))
 </script>
 
 <template>

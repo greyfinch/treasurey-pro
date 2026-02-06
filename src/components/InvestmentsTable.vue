@@ -72,35 +72,35 @@ const handleTerminate = (event: Event, id: string) => {
 
 <template>
   <div class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-gray-200">
-      <thead class="bg-gray-50">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+      <thead class="bg-gray-50 dark:bg-gray-900/50">
         <tr>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bank</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Principal</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Daily Rate</th>
-           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Accrued ROI</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dates</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bank</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Principal</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Daily Rate</th>
+           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Accrued ROI</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Dates</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
         </tr>
       </thead>
-      <tbody class="bg-white divide-y divide-gray-200">
+      <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
         <tr 
           v-for="inv in sortedInvestments" 
           :key="inv.id"
           @click="navigateToDetail(inv.id)"
-          class="hover:bg-gray-50 cursor-pointer transition-colors"
+          class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"
         >
           <td class="px-6 py-4 whitespace-nowrap">
             <div class="flex items-center">
-              <div class="h-10 w-10 flex-shrink-0 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold">
+              <div class="h-10 w-10 flex-shrink-0 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold">
                 {{ inv.bank.name.charAt(0) }}
               </div>
               <div class="ml-4">
-                <div class="text-sm font-medium text-gray-900">{{ inv.bank.name }}</div>
-                <div class="flex items-center gap-2 text-xs text-gray-500">
+                <div class="text-sm font-medium text-gray-900 dark:text-white">{{ inv.bank.name }}</div>
+                <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                   <span>ID: {{ inv.id.slice(0, 8) }}</span>
-                  <span class="text-gray-300">•</span>
+                  <span class="text-gray-300 dark:text-gray-600">•</span>
                   <span class="flex items-center gap-1">
                     <BuildingOfficeIcon class="h-3 w-3" />
                     {{ getSubsidiaryName(inv.organisationId) }}
@@ -110,21 +110,21 @@ const handleTerminate = (event: Event, id: string) => {
             </div>
           </td>
           <td class="px-6 py-4 whitespace-nowrap">
-            <div class="text-sm text-gray-900 font-medium">{{ formatCurrency(inv.principal, inv.currency) }}</div>
-            <div class="text-xs text-gray-500">{{ inv.currency }}</div>
+            <div class="text-sm text-gray-900 dark:text-white font-medium">{{ formatCurrency(inv.principal, inv.currency) }}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">{{ inv.currency }}</div>
           </td>
           <td class="px-6 py-4 whitespace-nowrap">
-            <div class="text-sm text-gray-900">{{ formatPercentage(inv.dailyRate) }}</div>
-             <div class="text-xs text-gray-500">Daily</div>
+            <div class="text-sm text-gray-900 dark:text-white">{{ formatPercentage(inv.dailyRate) }}</div>
+             <div class="text-xs text-gray-500 dark:text-gray-400">Daily</div>
           </td>
            <td class="px-6 py-4 whitespace-nowrap">
-            <div class="text-sm font-bold text-money-600">
+            <div class="text-sm font-bold text-money-600 dark:text-money-400">
               {{ formatCurrency(getROI(inv).toNumber(), inv.currency) }}
             </div>
           </td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-            <div><span class="text-xs text-gray-400">Start:</span> {{ formatDate(inv.startDate) }}</div>
-            <div><span class="text-xs text-gray-400">End:</span> {{ formatDate(inv.maturityDate) }}</div>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+            <div><span class="text-xs text-gray-400 dark:text-gray-500">Start:</span> {{ formatDate(inv.startDate) }}</div>
+            <div><span class="text-xs text-gray-400 dark:text-gray-500">End:</span> {{ formatDate(inv.maturityDate) }}</div>
           </td>
           <td class="px-6 py-4 whitespace-nowrap">
             <span :class="['px-2 inline-flex text-xs leading-5 font-semibold rounded-full', getStatusColor(getDisplayStatus(inv))]">
@@ -135,12 +135,12 @@ const handleTerminate = (event: Event, id: string) => {
             <button
               v-if="getDisplayStatus(inv) === 'ACTIVE'"
               @click="handleTerminate($event, inv.id)"
-              class="text-red-600 hover:text-red-900 p-2 rounded-lg hover:bg-red-50 transition-colors"
+              class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
               title="Terminate Investment"
             >
               <TrashIcon class="h-5 w-5" />
             </button>
-            <span v-else class="text-gray-400 text-xs">N/A</span>
+            <span v-else class="text-gray-400 dark:text-gray-600 text-xs">N/A</span>
           </td>
         </tr>
       </tbody>

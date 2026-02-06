@@ -97,13 +97,13 @@ const handleDelete = async (id: string) => {
     <div class="space-y-6">
         <div class="flex justify-between items-center">
             <div>
-                <h2 class="text-lg font-bold text-gray-900">FX Rate Management</h2>
-                <p class="text-sm text-gray-500">Manage exchange rates for multi-currency reporting</p>
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white">FX Rate Management</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Manage exchange rates for multi-currency reporting</p>
             </div>
             <div class="flex items-center gap-3">
                 <select 
                     v-model="selectedFilterCurrency" 
-                    class="text-xs text-gray-900 font-bold rounded-lg border-gray-200 focus:ring-primary-500 focus:border-primary-500 p-1.5 border min-w-[120px]"
+                    class="text-xs text-gray-900 dark:text-white font-bold rounded-lg border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary-500 focus:border-primary-500 p-1.5 border min-w-[120px] transition-colors"
                 >
                     <option value="">All Currencies</option>
                     <option v-for="c in currencies" :key="c.code" :value="c.code">{{ c.code }}</option>
@@ -112,7 +112,7 @@ const handleDelete = async (id: string) => {
                     @click="showHistory = !showHistory" 
                     :class="[
                         'flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-lg transition-colors border',
-                        showHistory ? 'bg-primary-50 text-primary-700 border-primary-200' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                        showHistory ? 'bg-primary-50 dark:bg-primary-900/40 text-primary-700 dark:text-primary-400 border-primary-200 dark:border-primary-800 shadow-sm' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
                     ]"
                 >
                     <ClockIcon class="w-4 h-4" />
@@ -129,9 +129,9 @@ const handleDelete = async (id: string) => {
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
         </div>
 
-        <div v-else class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50 uppercase text-[10px] font-bold tracking-wider text-gray-500">
+        <div v-else class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-900/50 uppercase text-[10px] font-bold tracking-wider text-gray-500 dark:text-gray-400">
                     <tr>
                         <th class="px-6 py-4 text-left">Status</th>
                         <th class="px-6 py-4 text-left">From</th>
@@ -142,24 +142,24 @@ const handleDelete = async (id: string) => {
                         <th class="px-6 py-4 text-right">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100">
-                    <tr v-for="rate in filteredRates" :key="rate.id" class="hover:bg-gray-50 transition-colors">
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                    <tr v-for="rate in filteredRates" :key="rate.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                         <td class="px-6 py-4">
-                            <span v-if="rate.status === 'ACTIVE'" class="flex items-center gap-1 text-green-600 font-bold text-[10px] uppercase">
+                            <span v-if="rate.status === 'ACTIVE'" class="flex items-center gap-1 text-green-600 dark:text-green-400 font-bold text-[10px] uppercase">
                                 <CheckCircleIcon class="w-3.5 h-3.5" />
                                 Active
                             </span>
-                            <span v-else class="text-gray-400 font-bold text-[10px] uppercase">
+                            <span v-else class="text-gray-400 dark:text-gray-500 font-bold text-[10px] uppercase">
                                 Superseded
                             </span>
                         </td>
-                        <td class="px-6 py-4 text-sm font-bold text-gray-900">{{ rate.fromCurrency }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-600">{{ rate.toCurrency }}</td>
-                        <td class="px-6 py-4 text-sm font-mono text-gray-900">{{ rate.rate }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-600">
-                            <span class="px-2 py-0.5 bg-gray-100 rounded-md text-[10px] uppercase font-bold text-gray-500">{{ rate.source }}</span>
+                        <td class="px-6 py-4 text-sm font-bold text-gray-900 dark:text-white">{{ rate.fromCurrency }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ rate.toCurrency }}</td>
+                        <td class="px-6 py-4 text-sm font-mono text-gray-900 dark:text-white">{{ rate.rate }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                            <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-md text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">{{ rate.source }}</span>
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-600">{{ formatDate(rate.effectiveDate) }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ formatDate(rate.effectiveDate) }}</td>
                         <td class="px-6 py-4 text-right">
                             <button @click="handleDelete(rate.id)" class="p-1.5 text-gray-400 hover:text-red-600 transition-colors">
                                 <TrashIcon class="w-4 h-4" />
@@ -176,35 +176,35 @@ const handleDelete = async (id: string) => {
         </div>
 
         <!-- Modal -->
-        <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50">
-            <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+        <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 dark:bg-gray-950/80 backdrop-blur-sm">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 border border-gray-100 dark:border-gray-700 transition-colors">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-bold text-gray-900">Add FX Rate</h3>
-                    <p class="text-[10px] text-primary-600 font-bold uppercase p-1 bg-primary-50 rounded">New Entry</p>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Add FX Rate</h3>
+                    <p class="text-[10px] text-primary-600 dark:text-primary-400 font-bold uppercase p-1 bg-primary-50 dark:bg-primary-900/40 rounded">New Entry</p>
                 </div>
                 <form @submit.prevent="handleSave" class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">From Currency</label>
-                            <select v-model="form.fromCurrency" class="mt-1 text-gray-900 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm border p-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">From Currency</label>
+                            <select v-model="form.fromCurrency" class="mt-1 text-gray-900 dark:text-white block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm border p-2 bg-white dark:bg-gray-900 transition-colors">
                                 <option v-for="c in currencies" :key="c.code" :value="c.code">{{ c.code }}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">To Currency</label>
-                            <select v-model="form.toCurrency" class="mt-1 text-gray-900 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm border p-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">To Currency</label>
+                            <select v-model="form.toCurrency" class="mt-1 text-gray-900 dark:text-white block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm border p-2 bg-white dark:bg-gray-900 transition-colors">
                                 <option v-for="c in currencies" :key="c.code" :value="c.code">{{ c.code }}</option>
                             </select>
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Rate</label>
-                        <input v-model="form.rate" type="number" step="0.0001" required class="mt-1 text-gray-900 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border p-2">
-                        <p class="text-[10px] text-gray-400 mt-1">Note: Adding a rate for a date that already has one will supersede the old rate.</p>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Rate</label>
+                        <input v-model="form.rate" type="number" step="0.0001" required class="mt-1 text-gray-900 dark:text-white block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border p-2 bg-white dark:bg-gray-900 transition-colors">
+                        <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Note: Adding a rate for a date that already has one will supersede the old rate.</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Source</label>
-                        <select v-model="form.source" class="mt-1 text-gray-900 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm border p-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Source</label>
+                        <select v-model="form.source" class="mt-1 text-gray-900 dark:text-white block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm border p-2 bg-white dark:bg-gray-900 transition-colors">
                             <option value="MANUAL">MANUAL</option>
                             <option value="CBN">CBN</option>
                             <option value="BLOOMBERG">BLOOMBERG</option>
@@ -212,11 +212,11 @@ const handleDelete = async (id: string) => {
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Effective Date</label>
-                        <input v-model="form.effectiveDate" type="date" required class="mt-1 text-gray-900 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border p-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Effective Date</label>
+                        <input v-model="form.effectiveDate" type="date" required class="mt-1 text-gray-900 dark:text-white block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border p-2 bg-white dark:bg-gray-900 transition-colors [color-scheme:light] dark:[color-scheme:dark]">
                     </div>
                     <div class="flex justify-end gap-3 mt-6">
-                        <button type="button" @click="showModal = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-300 rounded-lg hover:bg-gray-100">Cancel</button>
+                        <button type="button" @click="showModal = false" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">Cancel</button>
                         <button type="submit" :disabled="isSubmitting" class="btn-primary">
                             {{ isSubmitting ? 'Saving...' : 'Save Rate' }}
                         </button>

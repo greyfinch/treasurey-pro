@@ -112,8 +112,8 @@ const bankPerformanceRanking = computed(() => {
         <!-- Header -->
         <div class="flex justify-between items-center">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">Banks</h1>
-                <p class="text-sm text-gray-500">Manage partner banks</p>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Banks</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Manage partner banks</p>
             </div>
             <button 
                 @click="openAddModal"
@@ -125,75 +125,75 @@ const bankPerformanceRanking = computed(() => {
         </div>
 
         <!-- List -->
-        <div class="card p-0 overflow-hidden">
-            <div v-if="loading" class="p-8 text-center text-gray-500">Loading banks...</div>
-            <table v-else class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+        <div class="card p-0 overflow-hidden bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
+            <div v-if="loading" class="p-8 text-center text-gray-500 dark:text-gray-400">Loading banks...</div>
+            <table v-else class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-900/50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    <tr v-for="bank in banks" :key="bank.id">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    <tr v-for="bank in banks" :key="bank.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                             <button 
                                 @click="openInvestmentsModal(bank)"
-                                class="text-primary-600 hover:text-primary-900 hover:underline focus:outline-none"
+                                class="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 hover:underline focus:outline-none"
                             >
                                 {{ bank.name }}
                             </button>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{{ bank.id }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">{{ bank.id }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button @click="openEditModal(bank)" class="text-primary-600 hover:text-primary-900 mr-4">
+                            <button @click="openEditModal(bank)" class="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 mr-4 transition-colors">
                                 <PencilSquareIcon class="w-5 h-5" />
                             </button>
-                            <button @click="handleDelete(bank.id)" class="text-red-600 hover:text-red-900">
+                            <button @click="handleDelete(bank.id)" class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 transition-colors">
                                 <TrashIcon class="w-5 h-5" />
                             </button>
                         </td>
                     </tr>
                     <tr v-if="banks.length === 0">
-                         <td colspan="3" class="px-6 py-8 text-center text-gray-500 italic">No banks found. Add one to get started.</td>
+                         <td colspan="3" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400 italic">No banks found. Add one to get started.</td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
         <!-- Bank Performance Ranking -->
-        <div class="card bg-white p-4">
+        <div class="card bg-white dark:bg-gray-800 p-4 border-gray-100 dark:border-gray-700 transition-colors">
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <h2 class="text-lg font-semibold text-gray-900">Bank Performance Ranking</h2>
-                    <p class="text-xs text-gray-500">Strategic view of effective monthly yield by bank (weighted by principal)</p>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Bank Performance Ranking</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Strategic view of effective monthly yield by bank (weighted by principal)</p>
                 </div>
-                <span class="text-[10px] uppercase tracking-wider text-gray-400">Effective Rate</span>
+                <span class="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">Effective Rate</span>
             </div>
 
             <div v-if="bankPerformanceRanking.length" class="space-y-2">
                 <div
                     v-for="(bank, index) in bankPerformanceRanking"
                     :key="bank.id"
-                    class="flex items-center justify-between rounded-lg border border-gray-500 px-4 py-3 hover:bg-gray-50"
+                    class="flex items-center justify-between rounded-lg border border-gray-100 dark:border-gray-700 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                 >
                     <div class="flex items-center gap-3">
-                        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary-50 text-primary-700 text-xs font-semibold">
+                        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 text-xs font-semibold">
                             {{ index + 1 }}
                         </span>
                         <div>
-                            <p class="text-sm font-medium text-gray-900">{{ bank.name }}</p>
-                            <p class="text-[10px] text-gray-500">Performance ranking</p>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ bank.name }}</p>
+                            <p class="text-[10px] text-gray-500 dark:text-gray-400">Performance ranking</p>
                         </div>
                     </div>
                     <div class="text-right">
-                        <p class="text-sm font-semibold text-primary-700">{{ bank.effectiveRate.toFixed(1) }}%</p>
-                        <p class="text-[10px] text-gray-400">effective monthly</p>
+                        <p class="text-sm font-semibold text-primary-700 dark:text-primary-400">{{ bank.effectiveRate.toFixed(1) }}%</p>
+                        <p class="text-[10px] text-gray-400 dark:text-gray-500">effective monthly</p>
                     </div>
                 </div>
             </div>
-            <div v-else class="text-sm text-gray-500">No performance data yet.</div>
+            <div v-else class="text-sm text-gray-500 dark:text-gray-500 italic">No performance data yet.</div>
         </div>
 
 
@@ -206,21 +206,21 @@ const bankPerformanceRanking = computed(() => {
         />
 
         <!-- Investments View Modal -->
-        <div v-if="showInvestmentsModal" class="fixed inset-0 z-50 overflow-y-auto  bg-gray-500/90" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div v-if="showInvestmentsModal" class="fixed inset-0 z-50 overflow-y-auto bg-gray-500/90 dark:bg-gray-900/90 backdrop-blur-sm" aria-labelledby="modal-title" role="dialog" aria-modal="true">
             <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
                 <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full border border-gray-100 dark:border-gray-700 transition-colors">
+                    <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                         <div class="flex justify-between items-start mb-4">
                             <div>
-                                <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
                                     Investments for {{ selectedBankName }}
                                 </h3>
-                                <p class="text-sm text-gray-500 mt-1">
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                     Total Active: {{ selectedBankInvestments.filter((i: any) => i.status === 'ACTIVE').length }}
                                 </p>
                             </div>
-                            <button @click="showInvestmentsModal = false" class="text-gray-400 hover:text-gray-500">
+                            <button @click="showInvestmentsModal = false" class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
                                 <span class="sr-only">Close</span>
                                 <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -233,13 +233,13 @@ const bankPerformanceRanking = computed(() => {
                                 :investments="selectedBankInvestments"
                                 :target-date="new Date()"
                             />
-                            <div v-if="selectedBankInvestments.length === 0" class="text-center py-8 text-gray-500">
+                            <div v-if="selectedBankInvestments.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400 italic">
                                 No investments found for this bank.
                             </div>
                         </div>
                     </div>
-                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                        <button type="button" @click="showInvestmentsModal = false" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:w-auto sm:text-sm">
+                    <div class="bg-gray-50 dark:bg-gray-900/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-100 dark:border-gray-700">
+                        <button type="button" @click="showInvestmentsModal = false" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:w-auto sm:text-sm transition-colors">
                             Close
                         </button>
                     </div>

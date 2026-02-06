@@ -51,8 +51,8 @@ const handleDelete = async (id: string) => {
     <div class="space-y-6">
         <div class="flex justify-between items-center">
             <div>
-                <h2 class="text-lg font-bold text-gray-900">Organisation Management</h2>
-                <p class="text-sm text-gray-500">Manage your organisation units and subsidiaries</p>
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white">Organisation Management</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Manage your organisation units and subsidiaries</p>
             </div>
             <button @click="openCreateModal" class="btn-primary flex items-center gap-2 text-xs">
                 <PlusIcon class="w-4 h-4" />
@@ -65,33 +65,33 @@ const handleDelete = async (id: string) => {
         </div>
 
         <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div v-for="org in organisations" :key="org.id" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div v-for="org in organisations" :key="org.id" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 flex flex-col justify-between hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-primary-900/10 transition-all">
                 <div>
                     <div class="flex items-center justify-between mb-4">
-                        <div class="h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-primary-600">
+                        <div class="h-10 w-10 rounded-full bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center text-primary-600 dark:text-primary-400">
                             <BuildingOfficeIcon class="w-5 h-5" />
                         </div>
                         <span :class="[
                             'px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider',
-                            org.type === 'GROUP' ? 'bg-indigo-100 text-indigo-700' : 'bg-primary-100 text-primary-700'
+                            org.type === 'GROUP' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
                         ]">
                             {{ org.type }}
                         </span>
                     </div>
-                    <h3 class="text-base font-bold text-gray-900 mb-1">{{ org.name }}</h3>
-                    <p class="text-[10px] text-gray-500 font-mono mb-4 italic">ID: {{ org.id }}</p>
+                    <h3 class="text-base font-bold text-gray-900 dark:text-white mb-1">{{ org.name }}</h3>
+                    <p class="text-[10px] text-gray-500 dark:text-gray-400 font-mono mb-4 italic">ID: {{ org.id }}</p>
                 </div>
 
-                <div class="flex items-center justify-end gap-2 border-t border-gray-50 pt-4 mt-2">
+                <div class="flex items-center justify-end gap-2 border-t border-gray-50 dark:border-gray-700 pt-4 mt-2">
                     <router-link 
                         :to="`/subsidiaries/${org.id}`"
-                        class="px-2 py-1 text-[10px] font-bold text-primary-600 hover:bg-primary-50 rounded transition-colors mr-auto"
+                        class="px-2 py-1 text-[10px] font-bold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded transition-colors mr-auto"
                     >
                         View Dashboard
                     </router-link>
                     <button 
                         @click="openEditModal(org)" 
-                        class="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                        class="p-1.5 text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors"
                         title="Edit Subsidiary"
                     >
                         <PencilSquareIcon class="w-4 h-4" />
@@ -100,11 +100,11 @@ const handleDelete = async (id: string) => {
                         v-if="org.type !== 'GROUP'"
                         @click="handleDelete(org.id)" 
                         :disabled="isDeleting === org.id"
-                        class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                        class="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50"
                         title="Delete Subsidiary"
                     >
                         <TrashIcon v-if="isDeleting !== org.id" class="w-4 h-4" />
-                        <div v-else class="w-4 h-4 border-2 border-red-600 border-t-transparent animate-spin rounded-full"></div>
+                        <div v-else class="w-4 h-4 border-2 border-red-600 dark:border-red-400 border-t-transparent animate-spin rounded-full"></div>
                     </button>
                 </div>
             </div>

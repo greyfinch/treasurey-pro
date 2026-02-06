@@ -40,48 +40,48 @@ const toggle2FA = async () => {
 <template>
     <div class="max-w-2xl space-y-8">
         <!-- Password Change -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2 mb-6">
-                <LockClosedIcon class="w-5 h-5 text-gray-400" />
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-colors">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-6">
+                <LockClosedIcon class="w-5 h-5 text-gray-400 dark:text-gray-500" />
                 Security & Password
             </h2>
             
             <form @submit.prevent="handlePasswordChange" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Current Password</label>
-                    <input v-model="passwordForm.current" type="password" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border p-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Current Password</label>
+                    <input v-model="passwordForm.current" type="password" required class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border p-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-white transition-colors">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">New Password</label>
-                    <input v-model="passwordForm.new" type="password" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border p-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
+                    <input v-model="passwordForm.new" type="password" required class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border p-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-white transition-colors">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Confirm New Password</label>
-                    <input v-model="passwordForm.confirm" type="password" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border p-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
+                    <input v-model="passwordForm.confirm" type="password" required class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border p-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-white transition-colors">
                 </div>
-                <button type="submit" :disabled="isSubmitting" class="btn-primary w-full sm:w-auto">
+                <button type="submit" :disabled="isSubmitting" class="btn-primary w-full sm:w-auto shadow-md">
                     {{ isSubmitting ? 'Updating...' : 'Change Password' }}
                 </button>
             </form>
         </div>
 
         <!-- 2FA Toggle -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-colors">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="p-2 bg-primary-50 rounded-lg text-primary-600">
+                    <div class="p-2 bg-primary-50 dark:bg-primary-900/40 rounded-lg text-primary-600 dark:text-primary-400">
                         <ShieldCheckIcon class="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 class="font-bold text-gray-900">Two-Factor Authentication</h3>
-                        <p class="text-sm text-gray-500">Secure your account with 2FA</p>
+                        <h3 class="font-bold text-gray-900 dark:text-white">Two-Factor Authentication</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Secure your account with 2FA</p>
                     </div>
                 </div>
                 <button 
                     @click="toggle2FA"
                     :class="[
                         'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
-                        isTwoFactorEnabled ? 'bg-primary-600' : 'bg-gray-200'
+                        isTwoFactorEnabled ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-700'
                     ]"
                 >
                     <span 

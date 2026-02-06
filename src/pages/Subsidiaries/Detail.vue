@@ -106,7 +106,7 @@ const clearFilters = () => {
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <router-link 
                 to="/subsidiaries"  
-                class="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
                 <ArrowLeftIcon class="w-4 h-4" /> Back to Subsidiaries
             </router-link>
@@ -123,21 +123,21 @@ const clearFilters = () => {
 
         <template v-else-if="organisation">
             <!-- Header -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-colors">
                 <div class="flex items-center gap-4">
-                    <div class="h-16 w-16 rounded-full bg-primary-50 flex items-center justify-center text-primary-600">
+                    <div class="h-16 w-16 rounded-full bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center text-primary-600 dark:text-primary-400">
                         <BuildingOfficeIcon class="w-8 h-8" />
                     </div>
                     <div>
-                        <h1 class="text-2xl font-bold text-gray-900">{{ organisation.name }} Dashboard</h1>
+                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ organisation.name }} Dashboard</h1>
                         <div class="flex items-center gap-2 mt-1">
                             <span :class="[
                                 'px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider',
-                                organisation.type === 'GROUP' ? 'bg-indigo-100 text-indigo-700' : 'bg-primary-100 text-primary-700'
+                                organisation.type === 'GROUP' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
                             ]">
                                 {{ organisation.type }}
                             </span>
-                            <span class="text-xs text-gray-500 font-mono">Reporting Base: {{ baseCurrency }}</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400 font-mono">Reporting Base: {{ baseCurrency }}</span>
                         </div>
                     </div>
                 </div>
@@ -160,9 +160,9 @@ const clearFilters = () => {
                 <!-- Main Content Area -->
                 <div class="lg:col-span-3 space-y-6">
                     <!-- Chart -->
-                    <div class="card bg-white">
+                    <div class="card bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
                         <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-base font-semibold text-gray-900 flex items-center gap-2">
+                            <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                                 <ArrowTrendingUpIcon class="w-5 h-5 text-primary-500" />
                                 Subsidiary ROI Growth
                             </h3>
@@ -175,20 +175,20 @@ const clearFilters = () => {
                     </div>
 
                     <!-- Investment List -->
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                        <div class="p-4 border-b border-gray-50 flex justify-between items-center bg-gray-50">
-                            <h2 class="text-sm font-bold text-gray-900 flex items-center gap-2">
-                                <BanknotesIcon class="w-5 h-5 text-gray-400" />
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors">
+                        <div class="p-4 border-b border-gray-50 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50">
+                            <h2 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <BanknotesIcon class="w-5 h-5 text-gray-400 dark:text-gray-500" />
                                 Active Investments
                             </h2>
-                            <span class="text-xs font-medium px-2 py-1 bg-white rounded border border-gray-200 text-gray-500">
+                            <span class="text-xs font-medium px-2 py-1 bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
                                 {{ filteredInvestments.length }} records
                             </span>
                         </div>
 
                         <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50 uppercase text-[10px] font-bold tracking-wider text-gray-500">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-900/50 uppercase text-[10px] font-bold tracking-wider text-gray-500 dark:text-gray-400">
                                     <tr>
                                         <th class="px-6 py-4 text-left">Bank</th>
                                         <th class="px-6 py-4 text-left">Principal</th>
@@ -198,25 +198,25 @@ const clearFilters = () => {
                                         <th class="px-6 py-4 text-right">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-gray-100 bg-white">
-                                    <tr v-for="inv in filteredInvestments" :key="inv.id" class="hover:bg-gray-50 transition-colors">
-                                        <td class="px-6 py-4 text-sm font-semibold text-gray-900">
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                                    <tr v-for="inv in filteredInvestments" :key="inv.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border-gray-100 dark:border-gray-700">
+                                        <td class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">
                                             {{ inv.bank.name }}
                                         </td>
-                                        <td class="px-6 py-4 text-sm text-gray-700">
+                                        <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
                                             {{ formatCurrency(inv.principal, inv.currency) }}
                                         </td>
-                                        <td class="px-6 py-4 text-sm text-gray-600">
+                                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                                             {{ formatPercentage(inv.dailyRate) }}
                                         </td>
-                                        <td class="px-6 py-4 text-sm text-gray-600">
+                                        <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                                             {{ formatDate(inv.maturityDate) }}
                                         </td>
                                         <td class="px-6 py-4">
                                             <span :class="[
                                                 'px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide',
-                                                inv.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 
-                                                inv.status === 'MATURED' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
+                                                inv.status === 'ACTIVE' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 
+                                                inv.status === 'MATURED' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
                                             ]">
                                                 {{ inv.status }}
                                             </span>
@@ -224,14 +224,14 @@ const clearFilters = () => {
                                         <td class="px-6 py-4 text-right">
                                             <router-link 
                                                 :to="`/investments/${inv.id}`"
-                                                class="text-primary-600 hover:text-primary-800 text-xs font-bold"
+                                                class="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 text-xs font-bold transition-colors"
                                             >
                                                 View Detail
                                             </router-link>
                                         </td>
                                     </tr>
                                     <tr v-if="filteredInvestments.length === 0">
-                                        <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500 italic">
+                                        <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400 italic">
                                             No investments matching criteria.
                                         </td>
                                     </tr>
@@ -257,9 +257,9 @@ const clearFilters = () => {
             </div>
         </template>
 
-        <div v-else class="text-center py-20 bg-white rounded-xl border border-gray-100">
-            <p class="text-gray-500">Subsidiary not found.</p>
-            <router-link to="/subsidiaries" class="text-primary-600 hover:underline mt-2 inline-block">Return to list</router-link>
+        <div v-else class="text-center py-20 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 transition-colors">
+            <p class="text-gray-500 dark:text-gray-400">Subsidiary not found.</p>
+            <router-link to="/subsidiaries" class="text-primary-600 dark:text-primary-400 hover:underline mt-2 inline-block">Return to list</router-link>
         </div>
     </div>
 </template>
