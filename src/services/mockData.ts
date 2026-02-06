@@ -709,6 +709,23 @@ export const mockService = {
         });
     },
 
+    getBaseCurrency: async (): Promise<CurrencyCode> => {
+        return new Promise((resolve) => {
+            const group = ORGANISATIONS.find(o => o.type === 'GROUP');
+            resolve(group?.baseCurrency || 'NGN' as CurrencyCode);
+        });
+    },
+
+    setBaseCurrency: async (code: CurrencyCode): Promise<void> => {
+        return new Promise((resolve, reject) => {
+            const group = ORGANISATIONS.find(o => o.type === 'GROUP');
+            if (!group) return reject('Group organisation not found');
+            group.baseCurrency = code;
+            logAction('system:base_currency_update', { code });
+            resolve();
+        });
+    },
+
     // Currency CRUD
     addCurrency: async (currency: Currency): Promise<Currency> => {
         return new Promise((resolve) => {
@@ -733,9 +750,12 @@ export const mockService = {
 
     deleteCurrency: async (code: CurrencyCode): Promise<void> => {
         return new Promise((resolve, reject) => {
+            const group = ORGANISATIONS.find(o => o.type === 'GROUP');
+            const baseCode = group?.baseCurrency || 'NGN';
+
             const index = MOCK_CURRENCIES.findIndex(c => c.code === code);
-            if (index === -1 || code === 'NGN') {
-                reject('Cannot delete currency or base NGN');
+            if (index === -1 || code === baseCode) {
+                reject(`Cannot delete currency or it is the active base currency (${baseCode})`);
                 return;
             }
             MOCK_CURRENCIES.splice(index, 1);

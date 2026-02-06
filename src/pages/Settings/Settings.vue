@@ -1,22 +1,41 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { 
     BanknotesIcon, 
     ArrowPathRoundedSquareIcon, 
     ShieldCheckIcon,
-    Cog6ToothIcon
+    Cog6ToothIcon,
+    BuildingOfficeIcon,
+    BuildingLibraryIcon
 } from '@heroicons/vue/24/outline'
 import CurrencySettings from './sections/CurrencySettings.vue'
 import FXRateSettings from './sections/FXRateSettings.vue'
 import SecuritySettings from './sections/SecuritySettings.vue'
+import OrganisationSettings from './sections/OrganisationSettings.vue'
+import BankSettings from './sections/BankSettings.vue'
+
+const route = useRoute()
+const router = useRouter()
 
 const tabs = [
     { id: 'currency', name: 'Currencies', icon: BanknotesIcon, component: CurrencySettings },
     { id: 'fx-rates', name: 'FX Rates', icon: ArrowPathRoundedSquareIcon, component: FXRateSettings },
+    { id: 'organisations', name: 'Organisations', icon: BuildingOfficeIcon, component: OrganisationSettings },
+    { id: 'banks', name: 'Partner Banks', icon: BuildingLibraryIcon, component: BankSettings },
     { id: 'security', name: 'Security', icon: ShieldCheckIcon, component: SecuritySettings },
 ]
 
-const activeTab = ref('currency')
+const activeTab = ref((route.query.tab as string) || 'currency')
+
+watch(() => route.query.tab, (newTab) => {
+    if (newTab) activeTab.value = newTab as string
+})
+
+const setActiveTab = (id: string) => {
+    activeTab.value = id
+    router.replace({ query: { ...route.query, tab: id } })
+}
 
 const activeComponent = computed(() => {
     return tabs.find(t => t.id === activeTab.value)?.component || CurrencySettings
@@ -40,7 +59,7 @@ const activeComponent = computed(() => {
                     <button
                         v-for="tab in tabs"
                         :key="tab.id"
-                        @click="activeTab = tab.id"
+                        @click="setActiveTab(tab.id)"
                         :class="[
                             'w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-all',
                             activeTab === tab.id 
