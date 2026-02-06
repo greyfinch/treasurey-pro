@@ -71,6 +71,26 @@ export const MOCK_FX_RATES: FXRate[] = [
     },
     {
         id: uuidv4(),
+        fromCurrency: CurrencyCode.USD,
+        toCurrency: CurrencyCode.NGN,
+        rate: 1540.00,
+        source: FXSource.CBN,
+        effectiveDate: dayjs().subtract(1, 'day').startOf('day').toDate(),
+        status: FXStatus.SUPERSEDED,
+        createdAt: dayjs().subtract(1, 'day').toDate()
+    },
+    {
+        id: uuidv4(),
+        fromCurrency: CurrencyCode.USD,
+        toCurrency: CurrencyCode.NGN,
+        rate: 1535.50,
+        source: FXSource.CBN,
+        effectiveDate: dayjs().subtract(2, 'day').startOf('day').toDate(),
+        status: FXStatus.SUPERSEDED,
+        createdAt: dayjs().subtract(2, 'day').toDate()
+    },
+    {
+        id: uuidv4(),
         fromCurrency: CurrencyCode.EUR,
         toCurrency: CurrencyCode.NGN,
         rate: 1680.50,
@@ -415,12 +435,27 @@ export const mockService = {
 
     addFXRate: async (fxRate: Omit<FXRate, 'id' | 'createdAt' | 'status'>): Promise<FXRate> => {
         return new Promise((resolve) => {
+            const newId = uuidv4();
+            const createdAt = new Date();
+
+            // Supersede any existing EXACT same date/pair rate
+            MOCK_FX_RATES.forEach(r => {
+                if (
+                    r.fromCurrency === fxRate.fromCurrency &&
+                    r.toCurrency === fxRate.toCurrency &&
+                    dayjs(r.effectiveDate).isSame(dayjs(fxRate.effectiveDate), 'day')
+                ) {
+                    r.status = FXStatus.SUPERSEDED;
+                }
+            });
+
             const newRate: FXRate = {
                 ...fxRate,
-                id: uuidv4(),
-                createdAt: new Date(),
+                id: newId,
+                createdAt,
                 status: FXStatus.ACTIVE
             };
+
             MOCK_FX_RATES.push(newRate);
             logAction('fxrate:create', newRate);
             resolve(newRate);
@@ -665,12 +700,94 @@ export const mockService = {
         });
     },
 
-    getInvestmentsByOrganisationId: async (orgId: string): Promise<Investment[]> => {
+    async getInvestmentsByOrganisationId(orgId: string): Promise<Investment[]> {
         return new Promise((resolve) => {
             setTimeout(() => {
                 const investments = MOCK_INVESTMENTS.filter(i => i.organisationId === orgId);
                 resolve(investments);
             }, 300);
+        });
+    },
+
+    // Currency CRUD
+    addCurrency: async (currency: Currency): Promise<Currency> => {
+        return new Promise((resolve) => {
+            MOCK_CURRENCIES.push(currency);
+            logAction('currency:create', currency);
+            resolve(currency);
+        });
+    },
+
+    updateCurrency: async (code: CurrencyCode, updates: Partial<Currency>): Promise<Currency> => {
+        return new Promise((resolve, reject) => {
+            const index = MOCK_CURRENCIES.findIndex(c => c.code === code);
+            if (index === -1) {
+                reject('Currency not found');
+                return;
+            }
+            MOCK_CURRENCIES[index] = { ...MOCK_CURRENCIES[index]!, ...updates };
+            logAction('currency:update', { code, ...updates });
+            resolve(MOCK_CURRENCIES[index]!);
+        });
+    },
+
+    deleteCurrency: async (code: CurrencyCode): Promise<void> => {
+        return new Promise((resolve, reject) => {
+            const index = MOCK_CURRENCIES.findIndex(c => c.code === code);
+            if (index === -1 || code === 'NGN') {
+                reject('Cannot delete currency or base NGN');
+                return;
+            }
+            MOCK_CURRENCIES.splice(index, 1);
+            logAction('currency:delete', { code });
+            resolve();
+        });
+    },
+
+
+    updateFXRate: async (id: string, updates: Partial<FXRate>): Promise<FXRate> => {
+        return new Promise((resolve, reject) => {
+            const index = MOCK_FX_RATES.findIndex(r => r.id === id);
+            if (index === -1) {
+                reject('FX Rate not found');
+                return;
+            }
+            MOCK_FX_RATES[index] = { ...MOCK_FX_RATES[index]!, ...updates };
+            logAction('fxrate:update', { id, ...updates });
+            resolve(MOCK_FX_RATES[index]!);
+        });
+    },
+
+    deleteFXRate: async (id: string): Promise<void> => {
+        return new Promise((resolve, reject) => {
+            const index = MOCK_FX_RATES.findIndex(r => r.id === id);
+            if (index === -1) {
+                reject('FX Rate not found');
+                return;
+            }
+            const deleted = MOCK_FX_RATES[index];
+            MOCK_FX_RATES.splice(index, 1);
+            logAction('fxrate:delete', deleted);
+            resolve();
+        });
+    },
+
+    // Security
+    changePassword: async (_current: string, _next: string): Promise<void> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                logAction('user:password_change', { timestamp: new Date() });
+                resolve();
+            }, 500);
+        });
+    },
+
+    toggle2FA: async (enabled: boolean): Promise<void> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                logAction('user:2fa_toggle', { enabled });
+                resolve();
+            }, 500);
         });
     }
 };

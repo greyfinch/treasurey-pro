@@ -92,7 +92,7 @@ const options: ChartOptions<'line'> = {
       mode: 'index',
       intersect: false,
       callbacks: {
-        label: (context: any) => formatCurrency(context.raw)
+        label: (context: any) => formatCurrency(context.raw, props.baseCurrency || 'NGN')
       }
     }
   },
@@ -112,9 +112,10 @@ const options: ChartOptions<'line'> = {
       },
       ticks: {
         callback: (value: any) => {
-          if (value >= 1000000) return `₦${(value / 1000000).toFixed(1)}M`
-          if (value >= 1000) return `₦${(value / 1000).toFixed(1)}k`
-          return value
+          const symbol = props.baseCurrency === 'USD' ? '$' : props.baseCurrency === 'EUR' ? '€' : props.baseCurrency === 'GBP' ? '£' : '₦'
+          if (value >= 1000000) return `${symbol}${(value / 1000000).toFixed(1)}M`
+          if (value >= 1000) return `${symbol}${(value / 1000).toFixed(1)}k`
+          return `${symbol}${value}`
         },
         color: '#9ca3af'
       }

@@ -111,6 +111,34 @@ export function calculateInvestmentROI({
 }
 
 /**
+ * Find the most recent FX rate for a given date that is not after the target date
+ */
+export function getEffectiveFXRate(
+    fromCurrency: string,
+    toCurrency: string,
+    targetDate: Date | string,
+    fxRates: any[]
+) {
+    const target = dayjs(targetDate);
+
+    // Filter rates for the correct currency pair and where effective date <= target date
+    const eligibleRates = fxRates.filter(r =>
+        r.fromCurrency === fromCurrency &&
+        r.toCurrency === toCurrency &&
+        (dayjs(r.effectiveDate).isBefore(target) || dayjs(r.effectiveDate).isSame(target, 'day'))
+    );
+
+    if (eligibleRates.length === 0) return null;
+
+    // Sort by effective date descending and createdAt descending to get the most recent one
+    return eligibleRates.sort((a, b) => {
+        const dateDiff = dayjs(b.effectiveDate).unix() - dayjs(a.effectiveDate).unix();
+        if (dateDiff !== 0) return dateDiff;
+        return dayjs(b.createdAt).unix() - dayjs(a.createdAt).unix();
+    })[0];
+}
+
+/**
  * Calculate Total ROI Across ALL Investments (Portfolio View)
  * If targetCurrency is provided, converts all investment ROIs to that currency.
  * Requires fxRates if targetCurrency is different from investment currencies.
@@ -134,12 +162,12 @@ export function calculatePortfolioROI(
         let interest = roi.interest;
 
         if (targetCurrency && inv.currency !== targetCurrency) {
-            const fxRate = fxRates.find(r => r.fromCurrency === inv.currency && r.toCurrency === targetCurrency);
+            const fxRate = getEffectiveFXRate(inv.currency, targetCurrency, targetDate, fxRates);
             if (fxRate) {
                 interest = interest.mul(fxRate.rate);
             } else if (inv.currency === 'NGN' && targetCurrency === 'USD') {
-                // Handle reverse if needed or throw error. For now, simple conversion if rate is USD -> NGN
-                const reverseRate = fxRates.find(r => r.fromCurrency === targetCurrency && r.toCurrency === inv.currency);
+                // Handle reverse if needed (USD -> NGN)
+                const reverseRate = getEffectiveFXRate(targetCurrency, inv.currency, targetDate, fxRates);
                 if (reverseRate) {
                     interest = interest.div(reverseRate.rate);
                 }
@@ -165,8 +193,16 @@ export function calculateFXImpact(nativeROI: Decimal, originalRate: number, curr
 export function calculateDailyROI({
     investment,
     startDate,
-    endDate
-}: { investment: any, startDate: Date | string, endDate: Date | string }) {
+    endDate,
+    targetCurrency,
+    fxRates = []
+}: {
+    investment: any,
+    startDate: Date | string,
+    endDate: Date | string,
+    targetCurrency?: string,
+    fxRates?: any[]
+}) {
     const start = dayjs(startDate);
     const end = dayjs(endDate);
     const days = end.diff(start, 'day');
@@ -184,9 +220,24 @@ export function calculateDailyROI({
             rollovers: investment.rollovers
         });
 
+        let roi = result.interest;
+
+        if (targetCurrency && investment.currency !== targetCurrency) {
+            const rate = getEffectiveFXRate(investment.currency, targetCurrency, currentDate.toDate(), fxRates);
+            if (rate) {
+                roi = roi.mul(rate.rate);
+            } else {
+                // Try reverse lookup
+                const reverseRate = getEffectiveFXRate(targetCurrency, investment.currency, currentDate.toDate(), fxRates);
+                if (reverseRate) {
+                    roi = roi.div(reverseRate.rate);
+                }
+            }
+        }
+
         breakdown.push({
             date: currentDate.format('YYYY-MM-DD'),
-            roi: result.interest.toNumber(),
+            roi: roi.toNumber(),
             principal: result.principal.toNumber()
         });
     }
