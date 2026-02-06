@@ -380,7 +380,28 @@ export interface AuditLog {
     timestamp: Date;
 }
 
-const AUDIT_LOGS: AuditLog[] = [];
+const AUDIT_LOGS: AuditLog[] = [
+    {
+        id: 'initial-1',
+        userId: 'user-1',
+        userName: 'Admin User',
+        userRole: 'GROUP_CFO' as any,
+        organisationId: 'org-1',
+        action: 'system:init',
+        details: { message: 'System audit trail initialized' },
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24) // 1 day ago
+    },
+    {
+        id: 'initial-2',
+        userId: 'user-1',
+        userName: 'Admin User',
+        userRole: 'GROUP_CFO' as any,
+        organisationId: 'org-1',
+        action: 'org:create',
+        details: { name: 'Proforge Subsidiaries' },
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2) // 2 hours ago
+    }
+];
 
 const logAction = (action: string, details: any) => {
     AUDIT_LOGS.push({
@@ -681,13 +702,15 @@ export const mockService = {
         });
     },
 
-    async getAuditLogs(): Promise<any[]> {
+    async getAuditLogs(): Promise<AuditLog[]> {
         return new Promise((resolve) => {
-            resolve([
-                { id: '1', action: 'LOGIN', userId: 'user-1', timestamp: new Date(), details: 'User logged in' },
-                { id: '2', action: 'INVESTMENT_CREATE', userId: 'user-1', timestamp: new Date(), details: 'New multi-currency investment added' },
-                { id: '3', action: 'ORG_CREATE', userId: 'user-1', timestamp: new Date(), details: 'New subsidiary created' }
-            ]);
+            setTimeout(() => {
+                // Sort by timestamp descending
+                const sortedLogs = [...AUDIT_LOGS].sort((a, b) =>
+                    b.timestamp.getTime() - a.timestamp.getTime()
+                );
+                resolve(sortedLogs);
+            }, 500);
         });
     },
 
