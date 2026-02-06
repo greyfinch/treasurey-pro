@@ -83,6 +83,12 @@ const handleDelete = async (id: string) => {
                 </div>
 
                 <div class="flex items-center justify-end gap-2 border-t border-gray-50 pt-4 mt-2">
+                    <router-link 
+                        :to="`/subsidiaries/${org.id}`"
+                        class="px-3 py-1.5 text-xs font-bold text-primary-600 hover:bg-primary-50 rounded-lg transition-colors mr-auto"
+                    >
+                        View Details
+                    </router-link>
                     <button 
                         @click="openEditModal(org)" 
                         class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"

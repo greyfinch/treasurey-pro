@@ -654,6 +654,24 @@ export const mockService = {
                 { id: '3', action: 'ORG_CREATE', userId: 'user-1', timestamp: new Date(), details: 'New subsidiary created' }
             ]);
         });
+    },
+
+    getOrganisationById: async (id: string): Promise<Organisation | undefined> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const org = ORGANISATIONS.find(o => o.id === id);
+                resolve(org);
+            }, 300);
+        });
+    },
+
+    getInvestmentsByOrganisationId: async (orgId: string): Promise<Investment[]> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const investments = MOCK_INVESTMENTS.filter(i => i.organisationId === orgId);
+                resolve(investments);
+            }, 300);
+        });
     }
 };
 

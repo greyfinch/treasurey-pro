@@ -241,7 +241,11 @@ const clearFilters = () => {
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 <tr v-for="sub in subsidiaryBreakdown" :key="sub.id" class="hover:bg-gray-50 transition-colors">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ sub.name }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        <router-link :to="`/subsidiaries/${sub.id}`" class="text-primary-600 hover:text-primary-800 hover:underline">
+                                            {{ sub.name }}
+                                        </router-link>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600">{{ formatCurrency(sub.principal, baseCurrency) }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-primary-600 font-semibold">{{ formatCurrency(sub.roi, baseCurrency) }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right">

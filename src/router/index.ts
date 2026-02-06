@@ -7,6 +7,7 @@ const InvestmentList = () => import('../pages/Investments/List.vue')
 const InvestmentDetail = () => import('../pages/Investments/Detail.vue')
 const BankList = () => import('../pages/Banks/List.vue')
 const SubsidiariesList = () => import('../pages/Subsidiaries/List.vue')
+const SubsidiaryDetail = () => import('../pages/Subsidiaries/Detail.vue')
 const AuditLogs = () => import('../pages/AuditLogs.vue')
 
 const routes: RouteRecordRaw[] = [
@@ -32,6 +33,12 @@ const routes: RouteRecordRaw[] = [
         path: '/subsidiaries',
         name: 'Subsidiaries',
         component: SubsidiariesList,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/subsidiaries/:id',
+        name: 'SubsidiaryDetail',
+        component: SubsidiaryDetail,
         meta: { requiresAuth: true }
     },
     {
