@@ -95,8 +95,8 @@ const handleLogout = () => {
               </router-link>
             </div>
           </div>
-          <div class="flex items-center gap-3 sm:gap-6">
-            <SubsidiarySwitcher />
+          <div class="flex items-center gap-2 sm:gap-6">
+            <SubsidiarySwitcher class="hidden lg:block" />
             
             <!-- User Profile Dropdown -->
             <div class="relative" ref="profileDropdownRef">
@@ -184,10 +184,22 @@ const handleLogout = () => {
           >
             Audit Logs
           </router-link>
-          <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800 px-4 pb-4">
+          <router-link 
+            to="/settings" 
+            class="border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
+            active-class="bg-primary-50 dark:bg-primary-900/20 border-primary-500 text-primary-700 dark:text-primary-400"
+            @click="isMobileMenuOpen = false"
+          >
+            Settings
+          </router-link>
+          <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800 px-4 space-y-4 pb-4">
+             <div>
+                <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 px-1">Active Organisation</p>
+                <SubsidiarySwitcher />
+             </div>
              <button 
                @click="confirmLogout"
-               class="w-full bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-4 py-2 rounded-lg text-sm font-bold border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center justify-center gap-2"
+               class="w-full bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-4 py-2.5 rounded-lg text-sm font-bold border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center justify-center gap-2"
              >
                 <ArrowRightOnRectangleIcon class="w-4 h-4" />
                 Sign Out

@@ -49,7 +49,7 @@ const handleDelete = async (id: string) => {
 
 <template>
     <div class="space-y-6">
-        <div class="flex justify-between items-center">
+        <div class="flex flex-wrap justify-between items-center">
             <div>
                 <h2 class="text-lg font-bold text-gray-900 dark:text-white">Organisation Management</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Manage your organisation units and subsidiaries</p>

@@ -283,7 +283,7 @@ const handleTerminate = async () => {
                         <span class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ subsidiaryName }}</span>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                      <button 
                         v-if="investment.status === 'ACTIVE' && canDo('withdrawal:create', { organisationId: investment.organisationId })"
                         @click="showWithdrawModal = true"

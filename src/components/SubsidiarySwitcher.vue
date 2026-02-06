@@ -25,7 +25,7 @@ const handleSelect = (orgId: string) => {
 </script>
 
 <template>
-    <div v-if="!isLoading && activeOrganisation" class="w-64">
+    <div v-if="!isLoading && activeOrganisation" class="w-full lg:w-64">
         <Listbox :modelValue="activeOrganisation.id" @update:modelValue="handleSelect">
             <div class="relative mt-1">
                 <ListboxButton
@@ -82,5 +82,5 @@ const handleSelect = (orgId: string) => {
             </div>
         </Listbox>
     </div>
-    <div v-else class="h-10 w-64 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg"></div>
+    <div v-else class="h-10 w-full lg:w-64 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg"></div>
 </template>
