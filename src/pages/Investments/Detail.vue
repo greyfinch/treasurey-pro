@@ -122,10 +122,10 @@ const reportingPrincipal = computed(() => {
 
 const dailyBreakdown = computed(() => {
     if (!investment.value) return []
-    // Show last 30 days breakdown
+    // Show breakdown starting from investment start date
     return calculateDailyROI({
         investment: investment.value,
-        startDate: dayjs(targetDate.value).subtract(30, 'day').toDate(),
+        startDate: dayjs(investment.value.startDate).toDate(),
         endDate: targetDate.value
     })
 })
@@ -337,8 +337,8 @@ const handleTerminate = async () => {
                     <p class="text-lg font-medium text-gray-900 dark:text-white">{{ formatDate(investment.maturityDate) }}</p>
                 </div>
             </div>
-            <div v-if="investment.currency !== baseCurrency" class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800 flex items-center justify-between transition-colors">
-                <div class="flex items-center gap-2">
+            <div v-if="investment.currency !== baseCurrency" class="flex flex-col md:flex-row items-start md:items-center gap-2 mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800 flex items-center justify-between transition-colors">
+                <div class="flex flex-col md:flex-row items-start md:items-center gap-2">
                     <span class="text-xs font-bold text-blue-800 dark:text-blue-400 uppercase tracking-wider">FX Information:</span>
                     <span class="text-sm text-blue-700 dark:text-blue-300">Reporting in {{ baseCurrency }} at rate {{ fxRateUsed }}</span>
                 </div>
@@ -397,8 +397,8 @@ const handleTerminate = async () => {
                             <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
                                 <tr v-for="day in dailyBreakdown" :key="day.date" class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                                     <td class="px-6 py-3 text-gray-900 dark:text-white">{{ dayjs(day.date).format('MMM D, YYYY') }}</td>
-                                    <td class="px-6 py-3 text-gray-600 dark:text-gray-400">{{ formatCurrency(day.principal) }}</td>
-                                    <td class="px-6 py-3 font-medium text-money-600 dark:text-money-400">{{ formatCurrency(day.roi) }}</td>
+                                    <td class="px-6 py-3 text-gray-600 dark:text-gray-400">{{ formatCurrency(day.principal, investment.currency) }}</td>
+                                    <td class="px-6 py-3 font-medium text-money-600 dark:text-money-400">{{ formatCurrency(day.roi, investment.currency) }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -422,7 +422,7 @@ const handleTerminate = async () => {
                         <div>
                             <label class="block text-xs sm:text-sm font-semibold text-indigo-900 dark:text-indigo-200 mb-2">Principal Amount</label>
                             <div class="relative">
-                                <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">₦</span>
+                                <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">{{ investment.currency === 'NGN' ? '₦' : '$' }}</span>
                                 <input 
                                     type="number" 
                                     v-model="simulatorPrincipal"
@@ -474,12 +474,12 @@ const handleTerminate = async () => {
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                         <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border-2 border-indigo-100 dark:border-indigo-900/50 transition-colors">
                             <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Projected Interest</p>
-                            <p class="text-2xl sm:text-3xl font-black text-green-600 dark:text-green-500">{{ formatCurrency(simulatedResults.totalInterest) }}</p>
+                            <p class="text-2xl sm:text-3xl font-black text-green-600 dark:text-green-500">{{ formatCurrency(simulatedResults.totalInterest, investment.currency) }}</p>
                             <p class="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 mt-2">Over {{ simulatorDays }} days</p>
                         </div>
                         <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border-2 border-indigo-100 dark:border-indigo-900/50 transition-colors">
                             <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Final Balance</p>
-                            <p class="text-2xl sm:text-3xl font-black text-indigo-900 dark:text-indigo-100">{{ formatCurrency(simulatedResults.finalBalance) }}</p>
+                            <p class="text-2xl sm:text-3xl font-black text-indigo-900 dark:text-indigo-100">{{ formatCurrency(simulatedResults.finalBalance, investment.currency) }}</p>
                             <p class="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 mt-2">Principal + Interest</p>
                         </div>
                         <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border-2 border-indigo-100 dark:border-indigo-900/50 transition-colors">
@@ -522,8 +522,8 @@ const handleTerminate = async () => {
                                     <tr v-for="day in projectionPreview" :key="day.day" class="border-b border-gray-50 dark:border-gray-700/50">
                                         <td class="py-2 text-gray-700 dark:text-gray-300">{{ day.day }}</td>
                                         <td class="py-2 text-gray-600 dark:text-gray-400">{{ day.date }}</td>
-                                        <td class="py-2 text-right font-medium text-green-600 dark:text-green-400">{{ formatCurrency(day.interest) }}</td>
-                                        <td class="py-2 text-right font-bold text-indigo-900 dark:text-indigo-100">{{ formatCurrency(day.balance) }}</td>
+                                        <td class="py-2 text-right font-medium text-green-600 dark:text-green-400">{{ formatCurrency(day.interest, investment.currency) }}</td>
+                                        <td class="py-2 text-right font-bold text-indigo-900 dark:text-indigo-100">{{ formatCurrency(day.balance, investment.currency) }}</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -557,9 +557,9 @@ const handleTerminate = async () => {
                             class="relative pl-4 border-l-2 border-expense-200 dark:border-expense-900 py-1"
                         >
                             <div class="absolute -left-[5px] top-2 w-2.5 h-2.5 rounded-full bg-expense-500"></div>
-                            <p class="font-bold text-gray-900 dark:text-white">{{ formatCurrency(w.amount) }}</p>
+                            <p class="font-bold text-gray-900 dark:text-white">{{ formatCurrency(w.amount, investment.currency) }}</p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">{{ formatDate(w.withdrawalDate) }}</p>
-                            <p v-if="w.fee > 0" class="text-xs text-expense-600 dark:text-expense-400 mt-1">Fee: {{ formatCurrency(w.fee) }}</p>
+                            <p v-if="w.fee > 0" class="text-xs text-expense-600 dark:text-expense-400 mt-1">Fee: {{ formatCurrency(w.fee, investment.currency) }}</p>
                         </div>
                      </div>
                      <div v-else class="text-sm text-gray-500 dark:text-gray-500 italic">No withdrawals recorded.</div>
@@ -575,7 +575,7 @@ const handleTerminate = async () => {
                             class="relative pl-4 border-l-2 border-primary-200 dark:border-primary-900 py-1"
                         >
                             <div class="absolute -left-[5px] top-2 w-2.5 h-2.5 rounded-full bg-primary-500"></div>
-                            <p class="font-bold text-gray-900 dark:text-white">+{{ formatCurrency(r.amount) }}</p>
+                            <p class="font-bold text-gray-900 dark:text-white">+{{ formatCurrency(r.amount, investment.currency) }}</p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">{{ formatDate(r.date) }}</p>
                         </div>
                      </div>
@@ -602,7 +602,7 @@ const handleTerminate = async () => {
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Amount</label>
                              <div class="mt-1 relative rounded-md shadow-sm">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <span class="text-gray-500 dark:text-gray-400 sm:text-sm">₦</span>
+                                    <span class="text-gray-500 dark:text-gray-400 sm:text-sm">{{ investment.currency === 'NGN' ? '₦' : '$' }}</span>
                                 </div>
                                 <input type="number" v-model="withdrawalForm.amount" required class="focus:ring-expense-500 focus:border-expense-500 block w-full pl-7 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-900 text-gray-900 dark:text-white" placeholder="0.00">
                             </div>
@@ -615,7 +615,7 @@ const handleTerminate = async () => {
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Fee (Optional)</label>
                              <div class="mt-1 relative rounded-md shadow-sm">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <span class="text-gray-500 dark:text-gray-400 sm:text-sm">₦</span>
+                                    <span class="text-gray-500 dark:text-gray-400 sm:text-sm">{{ investment.currency === 'NGN' ? '₦' : '$' }}</span>
                                 </div>
                                 <input type="number" v-model="withdrawalForm.fee" class="focus:ring-expense-500 focus:border-expense-500 block w-full pl-7 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-900 text-gray-900 dark:text-white" placeholder="0.00">
                             </div>
@@ -648,7 +648,7 @@ const handleTerminate = async () => {
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Additional Principal</label>
                              <div class="mt-1 relative rounded-md shadow-sm">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <span class="text-gray-500 dark:text-gray-400 sm:text-sm">₦</span>
+                                    <span class="text-gray-500 dark:text-gray-400 sm:text-sm">{{ investment.currency === 'NGN' ? '₦' : '$' }}</span>
                                 </div>
                                 <input type="number" v-model="rolloverForm.amount" required class="focus:ring-primary-500 focus:border-primary-500 block w-full pl-7 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-900 text-gray-900 dark:text-white" placeholder="0.00">
                             </div>
