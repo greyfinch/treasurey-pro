@@ -301,12 +301,12 @@ const confirmTerminate = async () => {
 
             <!-- Portfolio Totals (Hidden for restricted roles) -->
             <div v-if="canDo('roi:view')" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="card bg-gray-900 dark:bg-gray-800 border-gray-800 dark:border-gray-700">
-                    <p class="text-xs text-gray-400 uppercase tracking-wide">Total Principal</p>
-                    <p class="text-2xl font-bold text-white mt-2">
+                <div class="card bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Principal</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white mt-2">
                         {{ formatCurrency(totalPrincipal) }}
                     </p>
-                    <p class="text-[10px] text-gray-500 mt-1">Across all investments</p>
+                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Across all investments</p>
                 </div>
                 <div class="card bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
                     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Accrued ROI</p>
@@ -317,42 +317,42 @@ const confirmTerminate = async () => {
                 </div>
             </div>
             <!-- Cash Lock-in (Hidden for restricted roles) -->
-            <div v-if="canDo('liquidity:view')" class="card bg-gray-900 dark:bg-gray-800 border-gray-800 dark:border-gray-700 overflow-hidden">
+            <div v-if="canDo('liquidity:view')" class="card bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 overflow-hidden transition-colors">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <h2 class="text-lg font-semibold text-white">Cash Lock-in</h2>
-                        <p class="text-xs text-gray-400">Liquidity outlook based on maturity dates</p>
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Cash Lock-in</h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Liquidity outlook based on maturity dates</p>
                     </div>
-                    <span class="text-[10px] uppercase tracking-wider text-gray-500">Today & Next {{ cashLockInMetrics.daysAhead }} Days</span>
+                    <span class="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">Today & Next {{ cashLockInMetrics.daysAhead }} Days</span>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="rounded-lg border border-gray-800 dark:border-gray-700 p-4 bg-gray-800/50 dark:bg-gray-900/50">
-                        <p class="text-[11px] text-gray-400 uppercase tracking-wide">Locked today</p>
-                        <p class="text-2xl font-bold text-indigo-400">
+                    <div class="rounded-lg border border-gray-100 dark:border-gray-700 p-4 bg-gray-50/50 dark:bg-gray-900/50 transition-colors">
+                        <p class="text-[11px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">Locked today</p>
+                        <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
                             {{ cashLockInMetrics.lockedPercent.toFixed(1) }}%
                         </p>
-                        <p class="text-xs text-gray-500 mt-1">
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
                             {{ formatCurrency(cashLockInMetrics.lockedPrincipal) }} of {{ formatCurrency(cashLockInMetrics.totalPrincipal) }}
                         </p>
                     </div>
-                    <div class="rounded-lg border border-gray-800 dark:border-gray-700 p-4 bg-gray-800/50 dark:bg-gray-900/50">
+                    <div class="rounded-lg border border-gray-100 dark:border-gray-700 p-4 bg-gray-50/50 dark:bg-gray-900/50 transition-colors">
                         <div class="flex items-center justify-between gap-3">
-                            <p class="text-[11px] text-gray-400 uppercase tracking-wide">Becomes liquid in</p>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">Becomes liquid in</p>
                             <div class="flex items-center gap-2">
                                 <input
                                     v-model.number="liquidDays"
                                     type="number"
                                     min="1"
-                                    class="w-16 rounded-md border border-gray-700 dark:border-gray-600 bg-gray-900 dark:bg-gray-950 px-2 py-1 text-xs text-gray-300 transition-colors"
+                                    class="w-16 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-950 px-2 py-1 text-xs text-gray-900 dark:text-gray-300 transition-colors"
                                 >
-                                <span class="text-[11px] text-gray-500">days</span>
+                                <span class="text-[11px] text-gray-400 dark:text-gray-500">days</span>
                             </div>
                         </div>
-                        <p class="text-2xl font-bold text-green-400">
+                        <p class="text-2xl font-bold text-green-600 dark:text-green-400">
                             {{ formatCurrency(cashLockInMetrics.liquidNextWeekAmount) }}
                         </p>
-                        <p class="text-xs text-gray-500 mt-1">
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
                             {{ cashLockInMetrics.liquidPercent.toFixed(1) }}% of portfolio • {{ cashLockInMetrics.liquidNextWeekCount }} investments
                         </p>
                     </div>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { BuildingLibraryIcon } from '@heroicons/vue/24/solid'
 import { Bars3Icon, XMarkIcon, UserCircleIcon, ArrowRightOnRectangleIcon, ExclamationTriangleIcon, SunIcon, MoonIcon } from '@heroicons/vue/24/outline'
@@ -19,6 +19,7 @@ const isMobileMenuOpen = ref(false)
 const currentUser = ref<User | null>(null)
 const showLogoutModal = ref(false)
 const isProfileDropdownOpen = ref(false)
+const profileDropdownRef = ref<HTMLElement | null>(null)
 const { isDark, toggleTheme } = useTheme()
 
 const isLoginPage = computed(() => route.name === 'Login')
@@ -26,7 +27,18 @@ const isLoginPage = computed(() => route.name === 'Login')
 onMounted(async () => {
   await organisationService.init()
   currentUser.value = await mockService.getCurrentUser()
+  document.addEventListener('click', handleClickOutside)
 })
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+
+const handleClickOutside = (event: MouseEvent) => {
+  if (profileDropdownRef.value && !profileDropdownRef.value.contains(event.target as Node)) {
+    isProfileDropdownOpen.value = false
+  }
+}
 
 const confirmLogout = () => {
   showLogoutModal.value = true
@@ -87,7 +99,7 @@ const handleLogout = () => {
             <SubsidiarySwitcher />
             
             <!-- User Profile Dropdown -->
-            <div class="relative">
+            <div class="relative" ref="profileDropdownRef">
               <button 
                 @click="isProfileDropdownOpen = !isProfileDropdownOpen"
                 class="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-gray-700 group"
