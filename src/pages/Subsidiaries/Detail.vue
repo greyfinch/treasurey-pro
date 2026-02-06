@@ -27,6 +27,8 @@ const targetDate = ref(new Date())
 const selectedBankId = ref('')
 const selectedStatus = ref('')
 const selectedCurrency = ref('')
+const maturityDateStart = ref('')
+const maturityDateEnd = ref('')
 
 const fetchData = async () => {
     loading.value = true
@@ -57,7 +59,12 @@ const filteredInvestments = computed(() => {
         const matchBank = !selectedBankId.value || inv.bankId === selectedBankId.value
         const matchStatus = !selectedStatus.value || inv.status === selectedStatus.value
         const matchCurrency = !selectedCurrency.value || inv.currency === selectedCurrency.value
-        return matchBank && matchStatus && matchCurrency
+        
+        const invMaturity = dayjs(inv.maturityDate)
+        const matchMaturityStart = !maturityDateStart.value || invMaturity.isAfter(dayjs(maturityDateStart.value).subtract(1, 'day'), 'day')
+        const matchMaturityEnd = !maturityDateEnd.value || invMaturity.isBefore(dayjs(maturityDateEnd.value).add(1, 'day'), 'day')
+        
+        return matchBank && matchStatus && matchCurrency && matchMaturityStart && matchMaturityEnd
     })
 })
 
@@ -88,6 +95,8 @@ const clearFilters = () => {
     selectedBankId.value = ''
     selectedStatus.value = ''
     selectedCurrency.value = ''
+    maturityDateStart.value = ''
+    maturityDateEnd.value = ''
 }
 </script>
 
@@ -240,6 +249,8 @@ const clearFilters = () => {
                         v-model:selected-bank-id="selectedBankId"
                         v-model:selected-status="selectedStatus"
                         v-model:selected-currency="selectedCurrency"
+                        v-model:maturity-date-start="maturityDateStart"
+                        v-model:maturity-date-end="maturityDateEnd"
                         @clear="clearFilters"
                     />
                 </div>

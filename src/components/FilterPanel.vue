@@ -5,10 +5,12 @@ const props = defineProps<{
     currencies: any[],
     selectedBankId: string,
     selectedStatus: string,
-    selectedCurrency: string
+    selectedCurrency: string,
+    maturityDateStart: string,
+    maturityDateEnd: string
 }>()
 
-const emit = defineEmits(['update:selectedBankId', 'update:selectedStatus', 'update:selectedCurrency', 'clear'])
+const emit = defineEmits(['update:selectedBankId', 'update:selectedStatus', 'update:selectedCurrency', 'update:maturityDateStart', 'update:maturityDateEnd', 'clear'])
 
 const statuses = ['ACTIVE', 'MATURED', 'TERMINATED']
 </script>
@@ -33,6 +35,26 @@ const statuses = ['ACTIVE', 'MATURED', 'TERMINATED']
                         {{ curr.code }} - {{ curr.name }}
                     </option>
                  </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Maturity Date Range</label>
+                <div class="space-y-2">
+                    <input 
+                        type="date" 
+                        :value="maturityDateStart"
+                        @input="$emit('update:maturityDateStart', ($event.target as HTMLInputElement).value)"
+                        class="w-full text-sm text-black rounded-lg border border-gray-200 p-2"
+                        placeholder="Start Date"
+                    >
+                    <input 
+                        type="date" 
+                        :value="maturityDateEnd"
+                        @input="$emit('update:maturityDateEnd', ($event.target as HTMLInputElement).value)"
+                        class="w-full text-sm text-black rounded-lg border border-gray-200 p-2"
+                        placeholder="End Date"
+                    >
+                </div>
             </div>
 
             <div>

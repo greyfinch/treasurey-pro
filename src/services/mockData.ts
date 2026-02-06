@@ -409,6 +409,7 @@ export interface AuditLog {
     organisationId: string;
     action: string;
     details: any;
+    changes?: Array<{ field: string, old: any, new: any }>;
     timestamp: Date;
 }
 
@@ -456,10 +457,24 @@ const AUDIT_LOGS: AuditLog[] = [
         action: 'org:create',
         details: { name: 'Proforge Subsidiaries' },
         timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2) // 2 hours ago
+    },
+    {
+        id: 'initial-3',
+        userId: 'user-1',
+        userName: 'Obi Wan (Group CFO)',
+        userRole: 'GROUP_CFO' as any,
+        organisationId: 'org-holdco',
+        action: 'org:edit',
+        details: { id: 'org-foods', name: 'Acme Foods Updated' },
+        changes: [
+            { field: 'name', old: 'Acme Foods', new: 'Acme Foods Updated' },
+            { field: 'baseCurrency', old: 'NGN', new: 'USD' }
+        ],
+        timestamp: new Date(Date.now() - 1000 * 60 * 30) // 30 mins ago
     }
 ];
 
-const logAction = (action: string, details: any) => {
+const logAction = (action: string, details: any, changes?: any[]) => {
     AUDIT_LOGS.push({
         id: uuidv4(),
         userId: CURRENT_USER.id,
@@ -468,6 +483,7 @@ const logAction = (action: string, details: any) => {
         organisationId: CURRENT_USER.organisationId,
         action,
         details,
+        changes,
         timestamp: new Date()
     });
 };
@@ -700,9 +716,25 @@ export const mockService = {
                     reject('Organisation not found');
                     return;
                 }
+
+                const oldOrg = { ...ORGANISATIONS[index]! };
                 const updatedOrg = { ...ORGANISATIONS[index]!, ...updates };
+
+                // Track changes
+                const changes: any[] = [];
+                Object.keys(updates).forEach(key => {
+                    const k = key as keyof Organisation;
+                    if (updates[k] !== oldOrg[k]) {
+                        changes.push({
+                            field: k,
+                            old: oldOrg[k],
+                            new: updates[k]
+                        });
+                    }
+                });
+
                 ORGANISATIONS[index] = updatedOrg;
-                logAction('org:edit', { id, ...updates });
+                logAction('org:edit', { id, ...updates }, changes);
                 resolve(updatedOrg);
             }, 500);
         });

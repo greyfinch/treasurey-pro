@@ -26,12 +26,16 @@ const targetDate = ref(new Date())
 const selectedBankId = ref('')
 const selectedStatus = ref('')
 const selectedCurrency = ref('')
-const selectedMaturityDate = ref(route.query.maturityDate as string || '')
+const maturityDateStart = ref(route.query.maturityStart as string || '')
+const maturityDateEnd = ref(route.query.maturityEnd as string || '')
 const currencies = ref<any[]>([])
 const liquidDays = ref(7)
 
-watch(() => route.query.maturityDate, (newVal) => {
-    selectedMaturityDate.value = newVal as string || ''
+watch(() => route.query.maturityStart, (newVal) => {
+    maturityDateStart.value = newVal as string || ''
+})
+watch(() => route.query.maturityEnd, (newVal) => {
+    maturityDateEnd.value = newVal as string || ''
 })
 
 
@@ -110,8 +114,12 @@ const filteredInvestments = computed(() => {
         const matchBank = !selectedBankId.value || inv.bankId === selectedBankId.value
         const matchStatus = !selectedStatus.value || getDisplayStatus(inv) === selectedStatus.value
         const matchCurrency = !selectedCurrency.value || inv.currency === selectedCurrency.value
-        const matchMaturityDate = !selectedMaturityDate.value || dayjs(inv.maturityDate).isSame(dayjs(selectedMaturityDate.value), 'day')
-        return matchBank && matchStatus && matchCurrency && matchMaturityDate
+        
+        const invMaturity = dayjs(inv.maturityDate)
+        const matchMaturityStart = !maturityDateStart.value || invMaturity.isAfter(dayjs(maturityDateStart.value).subtract(1, 'day'), 'day')
+        const matchMaturityEnd = !maturityDateEnd.value || invMaturity.isBefore(dayjs(maturityDateEnd.value).add(1, 'day'), 'day')
+        
+        return matchBank && matchStatus && matchCurrency && matchMaturityStart && matchMaturityEnd
     })
 })
 
@@ -168,8 +176,9 @@ const clearFilters = () => {
     selectedBankId.value = ''
     selectedStatus.value = ''
     selectedCurrency.value = ''
-    selectedMaturityDate.value = ''
-    router.replace({ query: { ...route.query, maturityDate: undefined } })
+    maturityDateStart.value = ''
+    maturityDateEnd.value = ''
+    router.replace({ query: { ...route.query, maturityStart: undefined, maturityEnd: undefined, maturityDate: undefined } })
 }
 
 
@@ -260,14 +269,24 @@ const confirmTerminate = async () => {
                 leave-from-class="opacity-100 translate-y-0"
                 leave-to-class="opacity-0 -translate-y-4"
             >
-                <div v-if="selectedMaturityDate" class="bg-primary-50 border border-primary-100 rounded-xl p-4 flex items-center justify-between shadow-sm">
+                <div v-if="maturityDateStart || maturityDateEnd" class="bg-primary-50 border border-primary-100 rounded-xl p-4 flex items-center justify-between shadow-sm">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center">
                             <CalendarIcon class="w-6 h-6 text-primary-600" />
                         </div>
                         <div>
-                            <p class="text-sm font-bold text-primary-900">Filtering by Maturity Date</p>
-                            <p class="text-xs text-primary-600 font-medium">Showing investments maturing on {{ dayjs(selectedMaturityDate).format('MMMM D, YYYY') }}</p>
+                            <p class="text-sm font-bold text-primary-900">Filtering by Maturity Date Range</p>
+                            <p class="text-xs text-primary-600 font-medium">
+                                <span v-if="maturityDateStart && maturityDateEnd">
+                                    From {{ dayjs(maturityDateStart).format('MMM D, YYYY') }} to {{ dayjs(maturityDateEnd).format('MMM D, YYYY') }}
+                                </span>
+                                <span v-else-if="maturityDateStart">
+                                    From {{ dayjs(maturityDateStart).format('MMM D, YYYY') }} onwards
+                                </span>
+                                <span v-else-if="maturityDateEnd">
+                                    Until {{ dayjs(maturityDateEnd).format('MMM D, YYYY') }}
+                                </span>
+                            </p>
                         </div>
                     </div>
                     <button 
@@ -360,6 +379,8 @@ const confirmTerminate = async () => {
                         v-model:selected-bank-id="selectedBankId"
                         v-model:selected-status="selectedStatus"
                         v-model:selected-currency="selectedCurrency"
+                        v-model:maturity-date-start="maturityDateStart"
+                        v-model:maturity-date-end="maturityDateEnd"
                         @clear="clearFilters"
                     />
                 </div>

@@ -3,10 +3,13 @@ import { ref, onMounted } from 'vue'
 import { mockService } from '../services/mockData'
 import type { AuditLog } from '../services/mockData'
 import { formatCurrency } from '../utils/dateHelpers'
-import { ClipboardDocumentIcon, ShieldCheckIcon } from '@heroicons/vue/24/outline'
+import { ClipboardDocumentIcon, ShieldCheckIcon, EyeIcon } from '@heroicons/vue/24/outline'
+import AuditDetailsModal from '../components/AuditDetailsModal.vue'
 
 const logs = ref<AuditLog[]>([])
 const loading = ref(true)
+const selectedLog = ref<AuditLog | null>(null)
+const isModalOpen = ref(false)
 
 onMounted(async () => {
     try {
@@ -16,10 +19,16 @@ onMounted(async () => {
     }
 })
 
+const openDetails = (log: AuditLog) => {
+    selectedLog.value = log
+    isModalOpen.value = true
+}
+
 const getActionColor = (action: string) => {
     if (action.includes('create')) return 'text-green-600 bg-green-50 border-green-100'
     if (action.includes('terminate')) return 'text-red-600 bg-red-50 border-red-100'
     if (action.includes('withdrawal')) return 'text-orange-600 bg-orange-50 border-orange-100'
+    if (action.includes('edit')) return 'text-amber-600 bg-amber-50 border-amber-100'
     return 'text-blue-600 bg-blue-50 border-blue-100'
 }
 </script>
@@ -55,6 +64,7 @@ const getActionColor = (action: string) => {
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
@@ -87,10 +97,26 @@ const getActionColor = (action: string) => {
                                     Terminated Investment ID: <span class="font-mono text-[10px]">{{ log.details.investmentId.substring(0, 8) }}...</span>
                                 </div>
                             </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button 
+                                    @click="openDetails(log)"
+                                    class="inline-flex items-center gap-1 text-primary-600 hover:text-primary-900 font-semibold transition-colors"
+                                >
+                                    <EyeIcon class="w-4 h-4" />
+                                    View
+                                </button>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
+
+        <!-- Details Modal -->
+        <AuditDetailsModal 
+            :is-open="isModalOpen"
+            :log="selectedLog"
+            @close="isModalOpen = false"
+        />
     </div>
 </template>
