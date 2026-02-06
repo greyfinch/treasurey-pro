@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { PlusIcon, XMarkIcon } from '@heroicons/vue/24/outline'
+import { useRoute, useRouter } from 'vue-router'
+import { PlusIcon, XMarkIcon, CalendarIcon } from '@heroicons/vue/24/outline'
 import dayjs from 'dayjs'
 import InvestmentsTable from '../../components/InvestmentsTable.vue'
 import FilterPanel from '../../components/FilterPanel.vue'
@@ -11,6 +12,8 @@ import { calculatePortfolioROI } from '../../utils/roi'
 import { organisationService } from '../../services/organisationService'
 import { usePermissions } from '../../composables/usePermissions'
 
+const route = useRoute()
+const router = useRouter()
 const { activeOrganisation } = organisationService
 const { user, canDo, isGroupScope } = usePermissions()
 
@@ -23,8 +26,13 @@ const targetDate = ref(new Date())
 const selectedBankId = ref('')
 const selectedStatus = ref('')
 const selectedCurrency = ref('')
+const selectedMaturityDate = ref(route.query.maturityDate as string || '')
 const currencies = ref<any[]>([])
 const liquidDays = ref(7)
+
+watch(() => route.query.maturityDate, (newVal) => {
+    selectedMaturityDate.value = newVal as string || ''
+})
 
 
 // Modal
@@ -102,7 +110,8 @@ const filteredInvestments = computed(() => {
         const matchBank = !selectedBankId.value || inv.bankId === selectedBankId.value
         const matchStatus = !selectedStatus.value || getDisplayStatus(inv) === selectedStatus.value
         const matchCurrency = !selectedCurrency.value || inv.currency === selectedCurrency.value
-        return matchBank && matchStatus && matchCurrency
+        const matchMaturityDate = !selectedMaturityDate.value || dayjs(inv.maturityDate).isSame(dayjs(selectedMaturityDate.value), 'day')
+        return matchBank && matchStatus && matchCurrency && matchMaturityDate
     })
 })
 
@@ -159,6 +168,8 @@ const clearFilters = () => {
     selectedBankId.value = ''
     selectedStatus.value = ''
     selectedCurrency.value = ''
+    selectedMaturityDate.value = ''
+    router.replace({ query: { ...route.query, maturityDate: undefined } })
 }
 
 
@@ -240,6 +251,35 @@ const confirmTerminate = async () => {
         </div>
 
         <div class="grid grid-cols-1 gap-6">
+            <!-- Active Filter Banner -->
+            <transition
+                enter-active-class="transition duration-300 ease-out"
+                enter-from-class="opacity-0 -translate-y-4"
+                enter-to-class="opacity-100 translate-y-0"
+                leave-active-class="transition duration-200 ease-in"
+                leave-from-class="opacity-100 translate-y-0"
+                leave-to-class="opacity-0 -translate-y-4"
+            >
+                <div v-if="selectedMaturityDate" class="bg-primary-50 border border-primary-100 rounded-xl p-4 flex items-center justify-between shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center">
+                            <CalendarIcon class="w-6 h-6 text-primary-600" />
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-primary-900">Filtering by Maturity Date</p>
+                            <p class="text-xs text-primary-600 font-medium">Showing investments maturing on {{ dayjs(selectedMaturityDate).format('MMMM D, YYYY') }}</p>
+                        </div>
+                    </div>
+                    <button 
+                        @click="clearFilters"
+                        class="p-2 hover:bg-primary-100 rounded-lg transition-colors group"
+                        title="Clear filter"
+                    >
+                        <XMarkIcon class="w-5 h-5 text-primary-400 group-hover:text-primary-600" />
+                    </button>
+                </div>
+            </transition>
+
             <!-- Portfolio Totals (Hidden for restricted roles) -->
             <div v-if="canDo('roi:view')" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="card">

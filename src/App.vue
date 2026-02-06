@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { BuildingLibraryIcon } from '@heroicons/vue/24/solid'
 import { Bars3Icon, XMarkIcon } from '@heroicons/vue/24/outline'
 import SubsidiarySwitcher from './components/SubsidiarySwitcher.vue'
+import NotificationBell from './components/NotificationBell.vue'
 import { organisationService } from './services/organisationService'
 import { usePermissions } from './composables/usePermissions'
 import { onMounted } from 'vue'
@@ -70,6 +71,7 @@ const handleLogout = () => {
             </div>
           </div>
           <div class="flex items-center gap-6">
+            <NotificationBell />
             <SubsidiarySwitcher />
             <div class="flex items-center gap-4">
               <!-- Mobile menu button -->

@@ -306,6 +306,38 @@ const generateInvestments = () => {
         rollovers: []
     });
 
+    // 8. Investment Maturing TOMORROW
+    investments.push({
+        id: uuidv4(),
+        organisationId: 'org-transport',
+        bankId: BANKS[2]!.id,
+        bank: BANKS[2]!,
+        principal: '15000000',
+        currency: CurrencyCode.NGN,
+        dailyRate: '0.0004',
+        startDate: today.subtract(29, 'day').toDate(),
+        maturityDate: today.add(1, 'day').toDate(),
+        status: 'ACTIVE',
+        withdrawals: [],
+        rollovers: []
+    });
+
+    // 9. Investment Maturing in 7 DAYS (Liquid in 7 days)
+    investments.push({
+        id: uuidv4(),
+        organisationId: 'org-foods',
+        bankId: BANKS[4]!.id,
+        bank: BANKS[4]!,
+        principal: '250000000',
+        currency: CurrencyCode.NGN,
+        dailyRate: '0.00045',
+        startDate: today.subtract(23, 'day').toDate(),
+        maturityDate: today.add(7, 'day').toDate(),
+        status: 'ACTIVE',
+        withdrawals: [],
+        rollovers: []
+    });
+
 
     // 8. Second Investment for UBA - NGN
     const inv8StartDate = today.subtract(25, 'day');
@@ -379,6 +411,30 @@ export interface AuditLog {
     details: any;
     timestamp: Date;
 }
+
+export interface Notification {
+    id: string;
+    title: string;
+    description: string;
+    type: 'maturity' | 'liquidity' | 'system';
+    timestamp: Date;
+    isRead: boolean;
+    link?: { path: string; query: Record<string, string> };
+}
+
+export interface NotificationSettings {
+    maturityDays: number;
+    liquidityDays: number;
+    enableEmail: boolean;
+    enableInApp: boolean;
+}
+
+let MOCK_NOTIFICATION_SETTINGS: NotificationSettings = {
+    maturityDays: 1,
+    liquidityDays: 7,
+    enableEmail: true,
+    enableInApp: true
+};
 
 const AUDIT_LOGS: AuditLog[] = [
     {
@@ -829,6 +885,83 @@ export const mockService = {
         return new Promise((resolve) => {
             setTimeout(() => {
                 logAction('user:2fa_toggle', { enabled });
+                resolve();
+            }, 500);
+        });
+    },
+
+    getNotifications: async (): Promise<Notification[]> => {
+        return new Promise((resolve) => {
+            if (!MOCK_NOTIFICATION_SETTINGS.enableInApp) {
+                return resolve([]);
+            }
+
+            const today = dayjs().startOf('day');
+            const notifications: Notification[] = [];
+
+            // 1. Check for investments maturing based on settings
+            const maturityDate = today.add(MOCK_NOTIFICATION_SETTINGS.maturityDays, 'day');
+            const maturingSoon = MOCK_INVESTMENTS.filter(i =>
+                i.status === 'ACTIVE' &&
+                dayjs(i.maturityDate).isSame(maturityDate, 'day')
+            );
+
+            if (maturingSoon.length > 0) {
+                notifications.push({
+                    id: 'notif-maturity',
+                    title: 'Upcoming Maturity',
+                    description: `${maturingSoon.length} investment${maturingSoon.length > 1 ? 's' : ''} mature in ${MOCK_NOTIFICATION_SETTINGS.maturityDays} day${MOCK_NOTIFICATION_SETTINGS.maturityDays > 1 ? 's' : ''}`,
+                    type: 'maturity',
+                    timestamp: new Date(),
+                    isRead: false,
+                    link: {
+                        path: '/investments',
+                        query: { maturityDate: maturityDate.format('YYYY-MM-DD') }
+                    }
+                });
+            }
+
+            // 2. Check for investments maturing for liquidity
+            const liquidityDate = today.add(MOCK_NOTIFICATION_SETTINGS.liquidityDays, 'day');
+            const liquidSoon = MOCK_INVESTMENTS.filter(i =>
+                i.status === 'ACTIVE' &&
+                dayjs(i.maturityDate).isSame(liquidityDate, 'day')
+            );
+
+            liquidSoon.forEach((inv, idx) => {
+                const amountFactor = inv.currency === CurrencyCode.NGN ? 1000000 : 1;
+                const amountLabel = inv.currency === CurrencyCode.NGN ? 'm' : '';
+                const amountValue = Number(inv.principal) / amountFactor;
+
+                notifications.push({
+                    id: `notif-liquid-${idx}`,
+                    title: 'Liquidity Alert',
+                    description: `${inv.currency === CurrencyCode.NGN ? '₦' : inv.currency}${amountValue.toFixed(0)}${amountLabel} becomes liquid in ${MOCK_NOTIFICATION_SETTINGS.liquidityDays} days`,
+                    type: 'liquidity',
+                    timestamp: new Date(),
+                    isRead: false,
+                    link: {
+                        path: '/investments',
+                        query: { maturityDate: dayjs(inv.maturityDate).format('YYYY-MM-DD') }
+                    }
+                });
+            });
+
+            resolve(notifications);
+        });
+    },
+
+    getNotificationSettings: async (): Promise<NotificationSettings> => {
+        return new Promise((resolve) => {
+            setTimeout(() => resolve({ ...MOCK_NOTIFICATION_SETTINGS }), 300);
+        });
+    },
+
+    updateNotificationSettings: async (settings: NotificationSettings): Promise<void> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                MOCK_NOTIFICATION_SETTINGS = { ...settings };
+                logAction('system:notification_settings_update', settings);
                 resolve();
             }, 500);
         });

@@ -7,13 +7,15 @@ import {
     ShieldCheckIcon,
     Cog6ToothIcon,
     BuildingOfficeIcon,
-    BuildingLibraryIcon
+    BuildingLibraryIcon,
+    BellAlertIcon
 } from '@heroicons/vue/24/outline'
 import CurrencySettings from './sections/CurrencySettings.vue'
 import FXRateSettings from './sections/FXRateSettings.vue'
 import SecuritySettings from './sections/SecuritySettings.vue'
 import OrganisationSettings from './sections/OrganisationSettings.vue'
 import BankSettings from './sections/BankSettings.vue'
+import NotificationSettings from './sections/NotificationSettings.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -23,6 +25,7 @@ const tabs = [
     { id: 'fx-rates', name: 'FX Rates', icon: ArrowPathRoundedSquareIcon, component: FXRateSettings },
     { id: 'organisations', name: 'Organisations', icon: BuildingOfficeIcon, component: OrganisationSettings },
     { id: 'banks', name: 'Partner Banks', icon: BuildingLibraryIcon, component: BankSettings },
+    { id: 'notifications', name: 'Notifications', icon: BellAlertIcon, component: NotificationSettings },
     { id: 'security', name: 'Security', icon: ShieldCheckIcon, component: SecuritySettings },
 ]
 
