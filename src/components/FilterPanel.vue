@@ -2,11 +2,13 @@
 
 const props = defineProps<{
     banks: any[],
+    currencies: any[],
     selectedBankId: string,
-    selectedStatus: string
+    selectedStatus: string,
+    selectedCurrency: string
 }>()
 
-const emit = defineEmits(['update:selectedBankId', 'update:selectedStatus', 'clear'])
+const emit = defineEmits(['update:selectedBankId', 'update:selectedStatus', 'update:selectedCurrency', 'clear'])
 
 const statuses = ['ACTIVE', 'MATURED', 'TERMINATED']
 </script>
@@ -20,8 +22,23 @@ const statuses = ['ACTIVE', 'MATURED', 'TERMINATED']
         
         <div class="space-y-3">
             <div>
+                 <label class="block text-xs font-medium text-gray-500 mb-1">Currency</label>
+                 <select 
+                    :value="selectedCurrency" 
+                    @change="$emit('update:selectedCurrency', ($event.target as HTMLSelectElement).value)"
+                    class="w-full text-sm text-black rounded-lg border border-gray-200 p-2"
+                >
+                    <option value="">All Currencies</option>
+                    <option v-for="curr in currencies" :key="curr.code" :value="curr.code">
+                        {{ curr.code }} - {{ curr.name }}
+                    </option>
+                 </select>
+            </div>
+
+            <div>
                 <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
                 <div class="flex flex-wrap gap-2">
+
                     <button 
                         v-for="status in statuses" 
                         :key="status"

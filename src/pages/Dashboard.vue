@@ -25,18 +25,24 @@ const targetDate = ref(new Date())
 // Filters
 const selectedBankId = ref('')
 const selectedStatus = ref('')
+const selectedCurrency = ref('')
+const currencies = ref<any[]>([])
+
 
 onMounted(async () => {
     try {
-        const [invData, bankData, fxData] = await Promise.all([
+        const [invData, bankData, fxData, currData] = await Promise.all([
             mockService.getInvestments(),
             mockService.getBanks(),
-            mockService.getFXRates()
+            mockService.getFXRates(),
+            mockService.getCurrencies()
         ])
         investments.value = invData
         banks.value = bankData
         fxRates.value = fxData
+        currencies.value = currData
     } finally {
+
         loading.value = false
     }
 })
@@ -53,9 +59,11 @@ const filteredInvestments = computed(() => {
     return scopedInvestments.value.filter(inv => {
         const matchBank = !selectedBankId.value || inv.bankId === selectedBankId.value
         const matchStatus = !selectedStatus.value || inv.status === selectedStatus.value
-        return matchBank && matchStatus
+        const matchCurrency = !selectedCurrency.value || inv.currency === selectedCurrency.value
+        return matchBank && matchStatus && matchCurrency
     })
 })
+
 
 const baseCurrency = computed(() => activeOrganisation.value?.baseCurrency || 'NGN')
 
@@ -132,7 +140,9 @@ const handleExportCSV = () => {
 const clearFilters = () => {
     selectedBankId.value = ''
     selectedStatus.value = ''
+    selectedCurrency.value = ''
 }
+
 </script>
 
 <template>
@@ -275,10 +285,13 @@ const clearFilters = () => {
             <div class="lg:col-span-1">
                 <FilterPanel 
                     :banks="banks"
+                    :currencies="currencies"
                     v-model:selected-bank-id="selectedBankId"
                     v-model:selected-status="selectedStatus"
+                    v-model:selected-currency="selectedCurrency"
                     @clear="clearFilters"
                 />
+
                 
                 <!-- Summary Stats helper -->
                  <div class="mt-4 bg-primary-50 rounded-xl p-4 border border-primary-100">

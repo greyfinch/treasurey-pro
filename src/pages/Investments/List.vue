@@ -22,7 +22,10 @@ const targetDate = ref(new Date())
 // Filters
 const selectedBankId = ref('')
 const selectedStatus = ref('')
+const selectedCurrency = ref('')
+const currencies = ref<any[]>([])
 const liquidDays = ref(7)
+
 
 // Modal
 const showModal = ref(false)
@@ -62,13 +65,16 @@ onMounted(async () => {
 
 const fetchData = async () => {
     try {
-        const [invData, bankData] = await Promise.all([
+        const [invData, bankData, currData] = await Promise.all([
             mockService.getInvestments(),
-            mockService.getBanks()
+            mockService.getBanks(),
+            mockService.getCurrencies()
         ])
         investments.value = invData
         banks.value = bankData
+        currencies.value = currData
     } finally {
+
         loading.value = false
     }
 }
@@ -95,9 +101,11 @@ const filteredInvestments = computed(() => {
     return scopedInvestments.value.filter(inv => {
         const matchBank = !selectedBankId.value || inv.bankId === selectedBankId.value
         const matchStatus = !selectedStatus.value || getDisplayStatus(inv) === selectedStatus.value
-        return matchBank && matchStatus
+        const matchCurrency = !selectedCurrency.value || inv.currency === selectedCurrency.value
+        return matchBank && matchStatus && matchCurrency
     })
 })
+
 
 const totalPrincipal = computed(() => {
     return scopedInvestments.value.reduce((sum, inv) => sum + (Number(inv.principal) || 0), 0)
@@ -150,7 +158,9 @@ const cashLockInMetrics = computed(() => {
 const clearFilters = () => {
     selectedBankId.value = ''
     selectedStatus.value = ''
+    selectedCurrency.value = ''
 }
+
 
 const handleAddInvestment = async () => {
     // SECURITY: Force organisationId for subsidiary users
@@ -181,6 +191,8 @@ const handleAddInvestment = async () => {
             startDate: dayjs().format('YYYY-MM-DD'),
             maturityDate: dayjs().add(1, 'year').format('YYYY-MM-DD')
         }
+
+
 
     } finally {
         isSubmitting.value = false
@@ -304,11 +316,14 @@ const confirmTerminate = async () => {
                 <div class="lg:col-span-1">
                     <FilterPanel 
                         :banks="banks"
+                        :currencies="currencies"
                         v-model:selected-bank-id="selectedBankId"
                         v-model:selected-status="selectedStatus"
+                        v-model:selected-currency="selectedCurrency"
                         @clear="clearFilters"
                     />
                 </div>
+
             </div>
         </div>
 
