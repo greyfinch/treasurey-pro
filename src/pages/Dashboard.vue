@@ -165,7 +165,7 @@ const clearFilters = () => {
                 <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Treasury Dashboard</h1>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Overview of your investment portfolio performance</p>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-3">
                  <DateFilter v-model="targetDate" />
                  <ExportButtons @export-excel="handleExportExcel" @export-csv="handleExportCSV" />
             </div>
