@@ -540,6 +540,7 @@ const handleReconciliation = async () => {
                                 <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">{{ investment.currency === 'NGN' ? '₦' : '$' }}</span>
                                 <input 
                                     type="number" 
+                                    step="any"
                                     v-model="simulatorPrincipal"
                                     class="w-full text-gray-900 dark:text-white pl-8 pr-4 py-3 bg-white dark:bg-gray-800 border-2 border-indigo-200 dark:border-indigo-800 rounded-lg focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900/50 transition-all"
                                     placeholder="Enter amount"
@@ -724,7 +725,7 @@ const handleReconciliation = async () => {
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <span class="text-gray-500 dark:text-gray-400 sm:text-sm">{{ investment.currency === 'NGN' ? '₦' : '$' }}</span>
                                 </div>
-                                <input type="number" v-model="withdrawalForm.amount" required class="focus:ring-expense-500 focus:border-expense-500 block w-full pl-7 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-900 text-gray-900 dark:text-white" placeholder="0.00">
+                                <input type="number" step="any" v-model="withdrawalForm.amount" required class="focus:ring-expense-500 focus:border-expense-500 block w-full pl-7 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-900 text-gray-900 dark:text-white" placeholder="0.00">
                             </div>
                         </div>
                         <div>
@@ -737,7 +738,7 @@ const handleReconciliation = async () => {
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <span class="text-gray-500 dark:text-gray-400 sm:text-sm">{{ investment.currency === 'NGN' ? '₦' : '$' }}</span>
                                 </div>
-                                <input type="number" v-model="withdrawalForm.fee" class="focus:ring-expense-500 focus:border-expense-500 block w-full pl-7 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-900 text-gray-900 dark:text-white" placeholder="0.00">
+                                <input type="number" step="any" v-model="withdrawalForm.fee" class="focus:ring-expense-500 focus:border-expense-500 block w-full pl-7 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-900 text-gray-900 dark:text-white" placeholder="0.00">
                             </div>
                         </div>
                         <div class="mt-5 sm:mt-6">
@@ -770,7 +771,7 @@ const handleReconciliation = async () => {
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <span class="text-gray-500 dark:text-gray-400 sm:text-sm">{{ investment.currency === 'NGN' ? '₦' : '$' }}</span>
                                 </div>
-                                <input type="number" v-model="rolloverForm.amount" required class="focus:ring-primary-500 focus:border-primary-500 block w-full pl-7 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-900 text-gray-900 dark:text-white" placeholder="0.00">
+                                <input type="number" step="any" v-model="rolloverForm.amount" required class="focus:ring-primary-500 focus:border-primary-500 block w-full pl-7 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-900 text-gray-900 dark:text-white" placeholder="0.00">
                             </div>
                         </div>
                         <div>
@@ -851,7 +852,7 @@ const handleReconciliation = async () => {
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <span class="text-gray-500 dark:text-gray-400 sm:text-sm">{{ investment.currency === 'NGN' ? '₦' : '$' }}</span>
                                 </div>
-                                <input type="number" v-model="reconcileForm.actualInterest" required class="focus:ring-amber-500 focus:border-amber-500 block w-full pl-7 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-900 text-gray-900 dark:text-white" placeholder="0.00">
+                                <input type="number" step="any" v-model="reconcileForm.actualInterest" required class="focus:ring-amber-500 focus:border-amber-500 block w-full pl-7 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-900 text-gray-900 dark:text-white" placeholder="0.00">
                             </div>
                             <p class="mt-2 text-[10px] text-gray-500 dark:text-gray-400 italic">Enter the final net interest amount remitted by the bank for this investment.</p>
                         </div>
