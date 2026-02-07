@@ -24,6 +24,8 @@ interface InvestmentParams {
     dailyRate: number | string | Decimal;
     startDate: Date | string;
     targetDate: Date | string;
+    maturityDate?: Date | string;
+    status?: string;
     withdrawals?: Withdrawal[];
     rollovers?: Rollover[];
     whtRate?: number | string | Decimal;
@@ -37,6 +39,8 @@ export function calculateInvestmentROI({
     dailyRate,
     startDate,
     targetDate,
+    maturityDate,
+    status,
     withdrawals = [],
     rollovers = [],
     whtRate = 0
@@ -45,7 +49,19 @@ export function calculateInvestmentROI({
     let totalInterest = new Decimal(0);
 
     let cursorDate = dayjs(startDate);
-    const target = dayjs(targetDate);
+    let target = dayjs(targetDate);
+
+    // If mautirytDate provided, cap target date
+    if (maturityDate) {
+        const maturity = dayjs(maturityDate);
+        if (target.isAfter(maturity)) {
+            target = maturity;
+        }
+    }
+
+    // For terminated investments, we might want to rely on a passed termination date 
+    // or just assume the caller handles the targetDate. 
+    // But adhering to maturity is the primary fix requested.
 
     // If start date is after target date, no ROI
     if (cursorDate.isAfter(target)) {
@@ -104,6 +120,10 @@ export function calculateInvestmentROI({
 
     const wht = totalInterest.mul(new Decimal(whtRate).div(100));
 
+    // If status is terminated/matured, we might enforce 0 principal if full withdrawal happened? 
+    // But ROI calculation focuses on interest accrued. 
+    // The previous logic returns currentPrincipal which is fine.
+
     return {
         interest: totalInterest.minus(wht), // Net interest (to maintain compatibility)
         grossInterest: totalInterest,
@@ -158,6 +178,8 @@ export function calculatePortfolioROI(
             dailyRate: inv.dailyRate,
             startDate: inv.startDate,
             targetDate,
+            maturityDate: inv.maturityDate,
+            status: inv.status,
             withdrawals: inv.withdrawals,
             rollovers: inv.rollovers,
             whtRate
@@ -222,6 +244,8 @@ export function calculateDailyROI({
             dailyRate: investment.dailyRate,
             startDate: investment.startDate,
             targetDate: currentDate.toDate(),
+            maturityDate: investment.maturityDate,
+            status: investment.status,
             withdrawals: investment.withdrawals,
             rollovers: investment.rollovers,
             whtRate

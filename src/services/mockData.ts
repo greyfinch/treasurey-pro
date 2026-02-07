@@ -3,11 +3,11 @@ import dayjs from 'dayjs';
 
 // Realistic Bank Names in Nigeria
 let BANKS = [
-    { id: uuidv4(), name: 'Zenith Bank' },
-    { id: uuidv4(), name: 'Guaranty Trust Bank' },
-    { id: uuidv4(), name: 'United Bank for Africa' },
-    { id: uuidv4(), name: 'Access Bank' },
-    { id: uuidv4(), name: 'First Bank' }
+    { id: 'bank-zenith', name: 'Zenith Bank' },
+    { id: 'bank-gtb', name: 'Guaranty Trust Bank' },
+    { id: 'bank-uba', name: 'United Bank for Africa' },
+    { id: 'bank-access', name: 'Access Bank' },
+    { id: 'bank-first', name: 'First Bank' }
 ];
 
 export type OrgType = 'GROUP' | 'SUBSIDIARY';
@@ -124,6 +124,97 @@ export const ORGANISATIONS: Organisation[] = [
     { id: 'org-foods', name: 'Acme Foods', type: 'SUBSIDIARY', parentId: 'org-holdco', baseCurrency: CurrencyCode.NGN },
     { id: 'org-transport', name: 'Acme Transport', type: 'SUBSIDIARY', parentId: 'org-holdco', baseCurrency: CurrencyCode.NGN },
     { id: 'org-energy', name: 'Acme Energy', type: 'SUBSIDIARY', parentId: 'org-holdco', baseCurrency: CurrencyCode.NGN }
+];
+
+export interface BankBalance {
+    id: string;
+    organisationId: string;
+    bankId: string;
+    currency: CurrencyCode;
+    balance: number;
+    lastUpdated: Date;
+}
+
+export interface BalanceHistory {
+    id: string;
+    bankBalanceId: string;
+    previousBalance: number;
+    newBalance: number;
+    updatedBy: string; // User ID or name
+    updatedAt: Date;
+    notes?: string;
+}
+
+let BANK_BALANCES: BankBalance[] = [
+    {
+        id: 'bal-1',
+        organisationId: 'org-foods',
+        bankId: 'bank-access',
+        currency: CurrencyCode.NGN,
+        balance: 45000000,
+        lastUpdated: new Date('2024-01-15')
+    },
+    {
+        id: 'bal-2',
+        organisationId: 'org-foods',
+        bankId: 'bank-gtb',
+        currency: CurrencyCode.NGN,
+        balance: 32000000,
+        lastUpdated: new Date('2024-01-20')
+    },
+    {
+        id: 'bal-3',
+        organisationId: 'org-transport',
+        bankId: 'bank-access',
+        currency: CurrencyCode.NGN,
+        balance: 28000000,
+        lastUpdated: new Date('2024-01-18')
+    },
+    {
+        id: 'bal-4',
+        organisationId: 'org-energy',
+        bankId: 'bank-zenith',
+        currency: CurrencyCode.NGN,
+        balance: 55000000,
+        lastUpdated: new Date('2024-01-22')
+    },
+    {
+        id: 'bal-5',
+        organisationId: 'org-foods',
+        bankId: 'bank-zenith',
+        currency: CurrencyCode.USD,
+        balance: 150000,
+        lastUpdated: new Date('2024-01-25')
+    },
+    {
+        id: 'bal-6',
+        organisationId: 'org-transport',
+        bankId: 'bank-gtb',
+        currency: CurrencyCode.GBP,
+        balance: 45000,
+        lastUpdated: new Date('2024-01-26')
+    }
+];
+
+let BALANCE_HISTORY: BalanceHistory[] = [
+    {
+        id: 'hist-1',
+        bankBalanceId: 'bal-1',
+        previousBalance: 40000000,
+        newBalance: 45000000,
+        updatedBy: 'John Doe (CFO)',
+        updatedAt: new Date('2024-01-15T10:30:00'),
+        notes: 'Monthly balance update'
+    },
+    {
+        id: 'hist-2',
+        bankBalanceId: 'bal-2',
+        previousBalance: 30000000,
+        newBalance: 32000000,
+        updatedBy: 'Jane Smith (Finance Manager)',
+        updatedAt: new Date('2024-01-20T14:15:00'),
+        notes: 'Reconciliation after investment maturity'
+    }
 ];
 
 export type Role = 'GROUP_CFO' | 'GROUP_TREASURY_MANAGER' | 'SUB_FINANCE_MANAGER' | 'SUB_FINANCE_OFFICER' | 'AUDITOR' | 'GROUP_VIEWER' | 'SUB_VIEWER' | 'SYSTEM_ADMIN';
@@ -1033,6 +1124,110 @@ export const mockService = {
             setTimeout(() => {
                 MOCK_NOTIFICATION_SETTINGS = { ...settings };
                 logAction('system:notification_settings_update', settings);
+                resolve();
+            }, 500);
+        });
+    },
+
+    // Bank Balance Management
+    getBankBalancesByOrganisationId: async (organisationId: string): Promise<BankBalance[]> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const balances = BANK_BALANCES.filter(b => b.organisationId === organisationId)
+                    .map(b => ({ ...b }));
+                resolve(balances);
+            }, 300);
+        });
+    },
+
+    addBankBalance: async (organisationId: string, bankId: string, currency: CurrencyCode, initialBalance: number): Promise<BankBalance> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const newBalance: BankBalance = {
+                    id: `bal-${Date.now()}`,
+                    organisationId,
+                    bankId,
+                    currency,
+                    balance: initialBalance,
+                    lastUpdated: new Date()
+                };
+                BANK_BALANCES.push(newBalance);
+
+                // Create initial history entry
+                const historyEntry: BalanceHistory = {
+                    id: `hist-${Date.now()}`,
+                    bankBalanceId: newBalance.id,
+                    previousBalance: 0,
+                    newBalance: initialBalance,
+                    updatedBy: 'System',
+                    updatedAt: new Date(),
+                    notes: 'Initial balance entry'
+                };
+                BALANCE_HISTORY.push(historyEntry);
+
+                logAction('bank_balance:create', newBalance);
+                resolve({ ...newBalance });
+            }, 500);
+        });
+    },
+
+    updateBankBalance: async (balanceId: string, newBalance: number, notes?: string): Promise<BankBalance> => {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                const balance = BANK_BALANCES.find(b => b.id === balanceId);
+                if (!balance) {
+                    reject(new Error('Bank balance not found'));
+                    return;
+                }
+
+                const previousBalance = balance.balance;
+                balance.balance = newBalance;
+                balance.lastUpdated = new Date();
+
+                // Create history entry
+                const historyEntry: BalanceHistory = {
+                    id: `hist-${Date.now()}`,
+                    bankBalanceId: balanceId,
+                    previousBalance,
+                    newBalance,
+                    updatedBy: 'Current User', // In real app, get from auth context
+                    updatedAt: new Date(),
+                    notes
+                };
+                BALANCE_HISTORY.push(historyEntry);
+
+                logAction('bank_balance:update', { balanceId, previousBalance, newBalance, notes });
+                resolve({ ...balance });
+            }, 500);
+        });
+    },
+
+    getBalanceHistory: async (bankBalanceId: string): Promise<BalanceHistory[]> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const history = BALANCE_HISTORY
+                    .filter(h => h.bankBalanceId === bankBalanceId)
+                    .map(h => ({ ...h }))
+                    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+                resolve(history);
+            }, 300);
+        });
+    },
+
+    deleteBankBalance: async (balanceId: string): Promise<void> => {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                const index = BANK_BALANCES.findIndex(b => b.id === balanceId);
+                if (index === -1) {
+                    reject(new Error('Bank balance not found'));
+                    return;
+                }
+
+                BANK_BALANCES.splice(index, 1);
+                // Also remove history
+                BALANCE_HISTORY = BALANCE_HISTORY.filter(h => h.bankBalanceId !== balanceId);
+
+                logAction('bank_balance:delete', { balanceId });
                 resolve();
             }, 500);
         });

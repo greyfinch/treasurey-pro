@@ -140,11 +140,21 @@ const reportingPrincipal = computed(() => {
 
 const dailyBreakdown = computed(() => {
     if (!investment.value) return []
+    
+    // Determine effective end date (cap at maturity date)
+    let endDate = targetDate.value
+    if (investment.value.maturityDate) {
+        const maturity = dayjs(investment.value.maturityDate)
+        if (dayjs(targetDate.value).isAfter(maturity)) {
+            endDate = maturity.toDate()
+        }
+    }
+
     // Show breakdown starting from investment start date
     return calculateDailyROI({
         investment: investment.value,
         startDate: dayjs(investment.value.startDate).toDate(),
-        endDate: targetDate.value,
+        endDate: endDate,
         whtRate: taxSettings.value.whtRate
     })
 })

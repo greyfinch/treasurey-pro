@@ -20,6 +20,7 @@ const { user, canDo, isGroupScope } = usePermissions()
 const loading = ref(true)
 const investments = ref<any[]>([])
 const banks = ref<any[]>([])
+const bankBalances = ref<any[]>([])
 const targetDate = ref(new Date())
 
 // Filters
@@ -54,6 +55,42 @@ const handleBankSaved = async (newBank: any) => {
     newInvestment.value.bankId = newBank.id
 }
 
+// Restricted lists based on subsidiary bank accounts
+const availableBanks = computed(() => {
+    const orgId = newInvestment.value.organisationId
+    
+    // If no org selected, or org is GROUP (and no subsidiary selected), show all banks
+    // In a real app, GROUP might also have restrictions, but for now we focus on subsidiaries
+    if (!orgId) return banks.value
+    
+    const org = ORGANISATIONS.find(o => o.id === orgId)
+    if (!org || org.type === 'GROUP') return banks.value
+    
+    // For subsidiaries, only show banks they have accounts with
+    const accountBankIds = new Set(bankBalances.value.filter(b => b.organisationId === orgId).map(b => b.bankId))
+    return banks.value.filter(b => accountBankIds.has(b.id))
+})
+
+const availableCurrencies = computed(() => {
+    const orgId = newInvestment.value.organisationId
+    const bankId = newInvestment.value.bankId
+    
+    // If unrestricted, show all currencies
+    if (!orgId || !bankId) return currencies.value
+    
+    const org = ORGANISATIONS.find(o => o.id === orgId)
+    if (!org || org.type === 'GROUP') return currencies.value
+    
+    // Filter currencies based on available accounts for this bank
+    const accountCurrencies = new Set(
+        bankBalances.value
+            .filter(b => b.organisationId === orgId && b.bankId === bankId)
+            .map(b => b.currency)
+    )
+    
+    return currencies.value.filter(c => accountCurrencies.has(c.code))
+})
+
 const newInvestment = ref({
     organisationId: '',
     bankId: '',
@@ -66,9 +103,66 @@ const newInvestment = ref({
 
 
 // Initialize organisationId when modal opens
-watch(showModal, (val: boolean) => {
-    if (val && activeOrganisation.value && activeOrganisation.value.type === 'SUBSIDIARY') {
-        newInvestment.value.organisationId = activeOrganisation.value.id
+watch(showModal, async (val: boolean) => {
+    if (val) {
+        // Reset form if opening
+        if (!newInvestment.value.organisationId && activeOrganisation.value && activeOrganisation.value.type === 'SUBSIDIARY') {
+            newInvestment.value.organisationId = activeOrganisation.value.id
+        }
+        
+        // Fetch bank balances if not already loaded or stale
+        if (activeOrganisation.value) {
+           const orgId = activeOrganisation.value.type === 'GROUP' ? null : activeOrganisation.value.id
+           if (orgId) {
+               bankBalances.value = await mockService.getBankBalancesByOrganisationId(orgId)
+           } else {
+               // If group, we might want to fetch all or lazily fetch when subsidiary selected
+               // For simplicity, let's just fetch all balances or handle it in the watcher below
+           }
+        }
+    }
+})
+
+// Watch for organisation selection change in form to fetch specific balances
+watch(() => newInvestment.value.organisationId, async (newOrgId) => {
+    if (!newOrgId) return
+    
+    const org = ORGANISATIONS.find(o => o.id === newOrgId)
+    if (org && org.type === 'SUBSIDIARY') {
+        bankBalances.value = await mockService.getBankBalancesByOrganisationId(newOrgId)
+        
+        // Clear bank/currency if they are no longer valid
+        if (newInvestment.value.bankId) {
+             const hasAccount = bankBalances.value.some(b => b.organisationId === newOrgId && b.bankId === newInvestment.value.bankId)
+             if (!hasAccount) newInvestment.value.bankId = ''
+        }
+    }
+})
+
+// Watch for bank selection to validate currency
+watch(() => newInvestment.value.bankId, (newBankId) => {
+    if (!newBankId) return
+    const orgId = newInvestment.value.organisationId
+    
+    if (orgId) {
+         const org = ORGANISATIONS.find(o => o.id === orgId)
+         if (org && org.type === 'SUBSIDIARY') {
+             const hasCurrency = bankBalances.value.some(b => 
+                 b.organisationId === orgId && 
+                 b.bankId === newBankId && 
+                 b.currency === newInvestment.value.currency
+             )
+             
+             // If current currency is not valid for this bank, reset or default
+             if (!hasCurrency) {
+                 const available = availableCurrencies.value
+                 if (available.length > 0) {
+                     newInvestment.value.currency = available[0].code
+                 } else {
+                     newInvestment.value.currency = '' as any
+                 }
+             }
+         }
     }
 })
 
@@ -432,7 +526,7 @@ const confirmTerminate = async () => {
                                 <div class="flex gap-2">
                                     <select v-model="newInvestment.bankId" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors">
                                         <option value="" disabled>Select Bank</option>
-                                        <option v-for="bank in banks" :key="bank.id" :value="bank.id">{{ bank.name }}</option>
+                                        <option v-for="bank in availableBanks" :key="bank.id" :value="bank.id">{{ bank.name }}</option>
                                     </select>
                                     <button 
                                         v-if="canDo('bank:create')"
@@ -449,10 +543,9 @@ const confirmTerminate = async () => {
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Currency</label>
                                 <select v-model="newInvestment.currency" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors">
-                                    <option value="NGN">NGN - Nigerian Naira</option>
-                                    <option value="USD">USD - US Dollar</option>
-                                    <option value="EUR">EUR - Euro</option>
-                                    <option value="GBP">GBP - British Pound</option>
+                                    <option v-for="currency in availableCurrencies" :key="currency.code" :value="currency.code">
+                                        {{ currency.code }} - {{ currency.name }}
+                                    </option>
                                 </select>
                             </div>
 
