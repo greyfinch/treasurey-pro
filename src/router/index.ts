@@ -8,6 +8,7 @@ const InvestmentDetail = () => import('../pages/Investments/Detail.vue')
 const SubsidiaryDetail = () => import('../pages/Subsidiaries/Detail.vue')
 const Settings = () => import('../pages/Settings/Settings.vue')
 const AuditLogs = () => import('../pages/AuditLogs.vue')
+const Reports = () => import('../pages/Reports.vue')
 
 const routes: RouteRecordRaw[] = [
     {
@@ -58,6 +59,12 @@ const routes: RouteRecordRaw[] = [
         path: '/investments/:id',
         name: 'InvestmentDetail',
         component: InvestmentDetail,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/reports',
+        name: 'Reports',
+        component: Reports,
         meta: { requiresAuth: true }
     }
 ]

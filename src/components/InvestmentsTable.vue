@@ -10,6 +10,7 @@ import dayjs from 'dayjs'
 const props = defineProps<{
   investments: any[]
   targetDate: Date
+  whtRate?: number
 }>()
 
 const emit = defineEmits<{
@@ -46,9 +47,13 @@ const getROI = (investment: any) => {
     dailyRate: investment.dailyRate,
     startDate: investment.startDate,
     targetDate: props.targetDate,
-    withdrawals: investment.withdrawals
+    withdrawals: investment.withdrawals,
+    whtRate: props.whtRate || 0
   })
-  return result.interest
+  return {
+    gross: result.grossInterest.toNumber(),
+    net: result.interest.toNumber()
+  }
 }
 
 const getStatusColor = (status: string) => {
@@ -79,6 +84,7 @@ const handleTerminate = (event: Event, id: string) => {
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Principal</th>
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Daily Rate</th>
            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Accrued ROI</th>
+           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Net ROI</th>
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Dates</th>
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
@@ -118,8 +124,16 @@ const handleTerminate = (event: Event, id: string) => {
              <div class="text-xs text-gray-500 dark:text-gray-400">Daily</div>
           </td>
            <td class="px-6 py-4 whitespace-nowrap">
+            <div class="text-sm font-medium text-gray-900 dark:text-white">
+              {{ formatCurrency(getROI(inv).gross, inv.currency) }}
+            </div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
             <div class="text-sm font-bold text-money-600 dark:text-money-400">
-              {{ formatCurrency(getROI(inv).toNumber(), inv.currency) }}
+              {{ formatCurrency(getROI(inv).net, inv.currency) }}
+            </div>
+            <div v-if="props.whtRate" class="text-[10px] text-red-500 dark:text-red-400">
+              -{{ props.whtRate }}% WHTax
             </div>
           </td>
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">

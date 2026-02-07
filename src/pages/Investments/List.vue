@@ -30,6 +30,7 @@ const maturityDateStart = ref(route.query.maturityStart as string || '')
 const maturityDateEnd = ref(route.query.maturityEnd as string || '')
 const currencies = ref<any[]>([])
 const liquidDays = ref(7)
+const taxSettings = ref({ whtRate: 0 })
 
 watch(() => route.query.maturityStart, (newVal) => {
     maturityDateStart.value = newVal as string || ''
@@ -77,14 +78,16 @@ onMounted(async () => {
 
 const fetchData = async () => {
     try {
-        const [invData, bankData, currData] = await Promise.all([
+        const [invData, bankData, currData, taxData] = await Promise.all([
             mockService.getInvestments(),
             mockService.getBanks(),
-            mockService.getCurrencies()
+            mockService.getCurrencies(),
+            mockService.getTaxSettings()
         ])
         investments.value = invData
         banks.value = bankData
         currencies.value = currData
+        taxSettings.value = taxData
     } finally {
 
         loading.value = false
@@ -129,7 +132,11 @@ const totalPrincipal = computed(() => {
 })
 
 const totalAccruedROI = computed(() => {
-    return calculatePortfolioROI(scopedInvestments.value, targetDate.value, 'NGN', []).toNumber()
+    return calculatePortfolioROI(scopedInvestments.value, targetDate.value, 'NGN', [], 0).toNumber()
+})
+
+const totalNetROI = computed(() => {
+    return calculatePortfolioROI(scopedInvestments.value, targetDate.value, 'NGN', [], taxSettings.value.whtRate).toNumber()
 })
 
 
@@ -300,7 +307,7 @@ const confirmTerminate = async () => {
             </transition>
 
             <!-- Portfolio Totals (Hidden for restricted roles) -->
-            <div v-if="canDo('roi:view')" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div v-if="canDo('roi:view')" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div class="card bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
                     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Principal</p>
                     <p class="text-2xl font-bold text-gray-900 dark:text-white mt-2">
@@ -309,11 +316,18 @@ const confirmTerminate = async () => {
                     <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Across all investments</p>
                 </div>
                 <div class="card bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
-                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Accrued ROI</p>
-                    <p class="text-2xl font-bold text-money-600 dark:text-money-400 mt-2">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Accrued ROI (Gross)</p>
+                    <p class="text-2xl font-bold text-gray-700 dark:text-gray-200 mt-2">
                         {{ formatCurrency(totalAccruedROI) }}
                     </p>
-                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Portfolio to date</p>
+                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Total earned before tax</p>
+                </div>
+                <div class="card bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Net ROI (After Tax)</p>
+                    <p class="text-2xl font-bold text-money-600 dark:text-money-400 mt-2">
+                        {{ formatCurrency(totalNetROI) }}
+                    </p>
+                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Realised after {{ taxSettings.whtRate }}% WHT</p>
                 </div>
             </div>
             <!-- Cash Lock-in (Hidden for restricted roles) -->
@@ -366,6 +380,7 @@ const confirmTerminate = async () => {
                         <InvestmentsTable 
                             :investments="filteredInvestments"
                             :target-date="targetDate"
+                            :wht-rate="taxSettings.whtRate"
                             @terminate="handleTerminate"
                         />
                     </div>

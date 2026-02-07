@@ -26,6 +26,7 @@ interface InvestmentParams {
     targetDate: Date | string;
     withdrawals?: Withdrawal[];
     rollovers?: Rollover[];
+    whtRate?: number | string | Decimal;
 }
 
 /**
@@ -37,7 +38,8 @@ export function calculateInvestmentROI({
     startDate,
     targetDate,
     withdrawals = [],
-    rollovers = []
+    rollovers = [],
+    whtRate = 0
 }: InvestmentParams) {
     let currentPrincipal = new Decimal(principal);
     let totalInterest = new Decimal(0);
@@ -49,13 +51,13 @@ export function calculateInvestmentROI({
     if (cursorDate.isAfter(target)) {
         return {
             interest: new Decimal(0),
+            grossInterest: new Decimal(0),
+            whtAmount: new Decimal(0),
             principal: currentPrincipal
         };
     }
 
     // Combine withdrawals and rollovers into a single event stream
-    // Withdrawal: reduces principal (or payout)
-    // Rollover: increases principal (injection)
     const events = [
         ...withdrawals.map(w => ({
             type: 'WITHDRAWAL' as const,
@@ -74,10 +76,8 @@ export function calculateInvestmentROI({
     for (const event of events) {
         const eventDate = event.date;
 
-        // Stop processing events after target date
         if (eventDate.isAfter(target)) break;
 
-        // Calculate interest for the period before event
         const days = eventDate.diff(cursorDate, 'day');
 
         if (days > 0) {
@@ -89,14 +89,12 @@ export function calculateInvestmentROI({
         if (event.type === 'WITHDRAWAL') {
             currentPrincipal = currentPrincipal.minus(event.amount).minus(event.fee || 0);
         } else {
-            // ROLLOVER (Injection)
             currentPrincipal = currentPrincipal.plus(event.amount);
         }
 
         cursorDate = eventDate;
     }
 
-    // Calculate remaining interest from last event to target date
     const remainingDays = target.diff(cursorDate, 'day');
     if (remainingDays > 0) {
         totalInterest = totalInterest.plus(
@@ -104,8 +102,12 @@ export function calculateInvestmentROI({
         );
     }
 
+    const wht = totalInterest.mul(new Decimal(whtRate).div(100));
+
     return {
-        interest: totalInterest,
+        interest: totalInterest.minus(wht), // Net interest (to maintain compatibility)
+        grossInterest: totalInterest,
+        whtAmount: wht,
         principal: currentPrincipal
     };
 }
@@ -147,7 +149,8 @@ export function calculatePortfolioROI(
     investments: any[],
     targetDate: Date | string,
     targetCurrency?: string,
-    fxRates: any[] = []
+    fxRates: any[] = [],
+    whtRate: number = 0
 ) {
     return investments.reduce((acc, inv) => {
         const roi = calculateInvestmentROI({
@@ -156,7 +159,8 @@ export function calculatePortfolioROI(
             startDate: inv.startDate,
             targetDate,
             withdrawals: inv.withdrawals,
-            rollovers: inv.rollovers
+            rollovers: inv.rollovers,
+            whtRate
         });
 
         let interest = roi.interest;
@@ -195,13 +199,15 @@ export function calculateDailyROI({
     startDate,
     endDate,
     targetCurrency,
-    fxRates = []
+    fxRates = [],
+    whtRate = 0
 }: {
     investment: any,
     startDate: Date | string,
     endDate: Date | string,
     targetCurrency?: string,
-    fxRates?: any[]
+    fxRates?: any[],
+    whtRate?: number
 }) {
     const start = dayjs(startDate);
     const end = dayjs(endDate);
@@ -217,27 +223,34 @@ export function calculateDailyROI({
             startDate: investment.startDate,
             targetDate: currentDate.toDate(),
             withdrawals: investment.withdrawals,
-            rollovers: investment.rollovers
+            rollovers: investment.rollovers,
+            whtRate
         });
 
-        let roi = result.interest;
+        let netRoi = result.interest;
+        let grossRoi = result.grossInterest;
 
         if (targetCurrency && investment.currency !== targetCurrency) {
             const rate = getEffectiveFXRate(investment.currency, targetCurrency, currentDate.toDate(), fxRates);
             if (rate) {
-                roi = roi.mul(rate.rate);
+                netRoi = netRoi.mul(rate.rate);
+                grossRoi = grossRoi.mul(rate.rate);
             } else {
                 // Try reverse lookup
                 const reverseRate = getEffectiveFXRate(targetCurrency, investment.currency, currentDate.toDate(), fxRates);
                 if (reverseRate) {
-                    roi = roi.div(reverseRate.rate);
+                    netRoi = netRoi.div(reverseRate.rate);
+                    grossRoi = grossRoi.div(reverseRate.rate);
                 }
             }
         }
 
         breakdown.push({
             date: currentDate.format('YYYY-MM-DD'),
-            roi: roi.toNumber(),
+            roi: netRoi.toNumber(), // Keep for compatibility
+            netROI: netRoi.toNumber(),
+            grossROI: grossRoi.toNumber(),
+            whtAmount: result.whtAmount.toNumber(),
             principal: result.principal.toNumber()
         });
     }

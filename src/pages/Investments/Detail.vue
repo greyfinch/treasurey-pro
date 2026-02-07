@@ -6,6 +6,7 @@ import { calculateDailyROI, calculateInvestmentROI } from '../../utils/roi'
 import { formatDate, formatCurrency, formatPercentage } from '../../utils/dateHelpers'
 import { ArrowLeftIcon, BanknotesIcon, ArrowPathIcon, XMarkIcon, TrashIcon, BuildingOfficeIcon } from '@heroicons/vue/24/outline'
 import dayjs from 'dayjs'
+import Decimal from 'decimal.js'
 import { usePermissions } from '../../composables/usePermissions'
 
 const { user, canDo, isGroupScope } = usePermissions()
@@ -40,35 +41,41 @@ const simulatorPrincipal = ref('')
 const simulatorRate = ref('')
 const simulatorDays = ref(60)
 const showFullProjection = ref(false)
+const taxSettings = ref({ whtRate: 0 }) // Added taxSettings ref
 
 onMounted(async () => {
-    try {
-        const id = route.params.id as string
-        const [data, rates] = await Promise.all([
-            mockService.getInvestmentById(id),
-            mockService.getFXRates()
-        ])
-        
-        fxRates.value = rates
+    if (route.params.id) {
+        loading.value = true
+        try {
+            const id = route.params.id as string
+            const [inv, fxData, taxData] = await Promise.all([ // Updated destructuring
+                mockService.getInvestmentById(id),
+                mockService.getFXRates(),
+                mockService.getTaxSettings() // Fetch tax settings
+            ])
+            
+            fxRates.value = fxData
+            taxSettings.value = taxData // Assign tax settings
 
-        if (data) {
-            // SECURITY: Deep Scope Protection
-            // If user is NOT group-scoped, they ONLY see their own organisation's investments
-            if (!isGroupScope.value && data.organisationId !== user.organisationId) {
-                console.warn('Security Block: Unauthorised access to investment in other organisation');
-                router.push('/investments')
-                return
+            if (inv) { // Changed 'data' to 'inv'
+                // SECURITY: Deep Scope Protection
+                // If user is NOT group-scoped, they ONLY see their own organisation's investments
+                if (!isGroupScope.value && inv.organisationId !== user.organisationId) { // Changed 'data' to 'inv'
+                    console.warn('Security Block: Unauthorised access to investment in other organisation');
+                    router.push('/investments')
+                    return
+                }
+
+                investment.value = inv // Changed 'data' to 'inv'
+                // Initialize simulator with current investment values
+                simulatorPrincipal.value = inv.principal // Changed 'data' to 'inv'
+                simulatorRate.value = (parseFloat(inv.dailyRate) * 100).toFixed(3) // Convert to percentage // Changed 'data' to 'inv'
+            } else {
+                router.push('/')
             }
-
-            investment.value = data
-            // Initialize simulator with current investment values
-            simulatorPrincipal.value = data.principal
-            simulatorRate.value = (parseFloat(data.dailyRate) * 100).toFixed(3) // Convert to percentage
-        } else {
-            router.push('/')
+        } finally {
+            loading.value = false 
         }
-    } finally {
-        loading.value = false
     }
 })
 
@@ -87,16 +94,22 @@ const fxRateUsed = computed(() => {
 })
 
 // Computeds
-const accumulatedROI = computed(() => {
-    if (!investment.value) return 0
-    const result = calculateInvestmentROI({
+const stats = computed(() => { // Replaced accumulatedROI with stats
+    if (!investment.value) return null
+    return calculateInvestmentROI({
         principal: investment.value.principal,
         dailyRate: investment.value.dailyRate,
         startDate: investment.value.startDate,
         targetDate: targetDate.value,
-        withdrawals: investment.value.withdrawals
+        withdrawals: investment.value.withdrawals,
+        rollovers: investment.value.rollovers, // Added rollovers
+        whtRate: taxSettings.value.whtRate // Added whtRate
     })
-    return result.interest.toNumber()
+})
+
+const accumulatedROI = computed(() => {
+    if (!stats.value) return 0
+    return stats.value.interest.toNumber()
 })
 
 const currentPrincipal = computed(() => {
@@ -126,7 +139,8 @@ const dailyBreakdown = computed(() => {
     return calculateDailyROI({
         investment: investment.value,
         startDate: dayjs(investment.value.startDate).toDate(),
-        endDate: targetDate.value
+        endDate: targetDate.value,
+        whtRate: taxSettings.value.whtRate
     })
 })
 
@@ -135,42 +149,58 @@ const simulatedResults = computed(() => {
     if (!simulatorPrincipal.value || !simulatorRate.value || !simulatorDays.value) {
         return {
             totalInterest: 0,
+            grossInterest: 0,
+            whtAmount: 0,
             finalBalance: 0,
-            effectiveMPY: 0,
+            apy: 0,
             dailyBreakdown: []
         }
     }
-
-    const principal = parseFloat(simulatorPrincipal.value)
-    const dailyRate = parseFloat(simulatorRate.value) / 100 // Convert percentage to decimal
+    
+    const principal = new Decimal(simulatorPrincipal.value)
+    const dailyRate = new Decimal(parseFloat(simulatorRate.value)).div(100)
     const days = parseInt(simulatorDays.value.toString())
+    const whtPercent = new Decimal(taxSettings.value.whtRate).div(100)
 
-    // Calculate day-by-day projection
-    const dailyBreakdown: Array<{ day: number; date: string; principal: number; interest: number; balance: number }> = []
+    const dailyBreakdown: Array<{ day: number; date: string; principal: number; interest: number; balance: number; wht: number; netInterest: number }> = []
     let runningBalance = principal
-    let totalInterest = 0
+    let accumulatedGrossInterest = new Decimal(0)
+    let accumulatedWHT = new Decimal(0)
+    let accumulatedNetInterest = new Decimal(0)
 
+    const start = dayjs()
     for (let i = 1; i <= days; i++) {
-        const dayInterest = runningBalance * dailyRate
-        totalInterest += dayInterest
-        runningBalance += dayInterest
+        const dayInterest = runningBalance.mul(dailyRate)
+        const dayWHT = dayInterest.mul(whtPercent)
+        const dayNetInterest = dayInterest.minus(dayWHT)
         
-        dailyBreakdown.push({
-            day: i,
-            date: dayjs().add(i, 'day').format('MMM D, YYYY'),
-            principal: principal,
-            interest: dayInterest,
-            balance: runningBalance
-        })
+        accumulatedGrossInterest = accumulatedGrossInterest.plus(dayInterest)
+        accumulatedWHT = accumulatedWHT.plus(dayWHT)
+        accumulatedNetInterest = accumulatedNetInterest.plus(dayNetInterest)
+        
+        // In compound interest, we typically re-invest the net interest or the gross?
+        // Usually, tax is deducted on payout. But let's assume it compounds net.
+        runningBalance = runningBalance.plus(dayNetInterest)
+        
+        if (i <= 30 || i % 10 === 0 || i === days) {
+            dailyBreakdown.push({
+                day: i,
+                date: start.add(i, 'day').format('MMM DD'),
+                principal: runningBalance.minus(dayNetInterest).toNumber(),
+                interest: dayInterest.toNumber(),
+                wht: dayWHT.toNumber(),
+                netInterest: dayNetInterest.toNumber(),
+                balance: runningBalance.toNumber()
+            })
+        }
     }
 
-    // Calculate effective MPY (monthly percentage yield)
-    const effectiveMPY = (Math.pow(1 + dailyRate, 30) - 1) * 100
-
     return {
-        totalInterest,
-        finalBalance: runningBalance,
-        effectiveMPY,
+        totalInterest: accumulatedNetInterest.toNumber(),
+        grossInterest: accumulatedGrossInterest.toNumber(),
+        whtAmount: accumulatedWHT.toNumber(),
+        finalBalance: runningBalance.toNumber(),
+        apy: (Math.pow(1 + dailyRate.toNumber(), 365) - 1) * 100,
         dailyBreakdown
     }
 })
@@ -391,14 +421,23 @@ const handleTerminate = async () => {
                                 <tr>
                                     <th class="px-6 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Date</th>
                                     <th class="px-6 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Principal</th>
-                                    <th class="px-6 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Accrued ROI</th>
+                                    <th class="px-6 py-3 text-right font-medium text-gray-500 dark:text-gray-400">Gross ROI</th>
+                                    <th class="px-6 py-3 text-right font-medium text-gray-500 dark:text-gray-400">Net ROI</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                                <tr v-for="day in dailyBreakdown" :key="day.date" class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                                <tr v-for="day in dailyBreakdown.slice().reverse()" :key="day.date" class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                                     <td class="px-6 py-3 text-gray-900 dark:text-white">{{ dayjs(day.date).format('MMM D, YYYY') }}</td>
                                     <td class="px-6 py-3 text-gray-600 dark:text-gray-400">{{ formatCurrency(day.principal, investment.currency) }}</td>
-                                    <td class="px-6 py-3 font-medium text-money-600 dark:text-money-400">{{ formatCurrency(day.roi, investment.currency) }}</td>
+                                    <td class="px-6 py-3 text-right text-gray-600 dark:text-gray-400">{{ formatCurrency(day.grossROI, investment.currency) }}</td>
+                                    <td class="px-6 py-3 text-right">
+                                        <div class="font-medium text-money-600 dark:text-money-400">
+                                            {{ formatCurrency(day.netROI, investment.currency) }}
+                                        </div>
+                                        <div v-if="taxSettings.whtRate > 0" class="text-[10px] text-red-500 dark:text-red-400">
+                                            -{{ taxSettings.whtRate }}% WHTax
+                                        </div>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -471,21 +510,22 @@ const handleTerminate = async () => {
                     </div>
 
                     <!-- Results Display -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border-2 border-indigo-100 dark:border-indigo-900/50 transition-colors">
-                            <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Projected Interest</p>
-                            <p class="text-2xl sm:text-3xl font-black text-green-600 dark:text-green-500">{{ formatCurrency(simulatedResults.totalInterest, investment.currency) }}</p>
-                            <p class="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 mt-2">Over {{ simulatorDays }} days</p>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow border border-indigo-100 dark:border-indigo-900/50 transition-colors">
+                            <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Gross Interest</p>
+                            <p class="text-xl font-bold text-gray-700 dark:text-gray-200">{{ formatCurrency(simulatedResults.grossInterest, investment.currency) }}</p>
                         </div>
-                        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border-2 border-indigo-100 dark:border-indigo-900/50 transition-colors">
-                            <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Final Balance</p>
-                            <p class="text-2xl sm:text-3xl font-black text-indigo-900 dark:text-indigo-100">{{ formatCurrency(simulatedResults.finalBalance, investment.currency) }}</p>
-                            <p class="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 mt-2">Principal + Interest</p>
+                        <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow border border-red-100 dark:border-red-900/50 transition-colors">
+                            <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">WHT ({{ taxSettings.whtRate }}%)</p>
+                            <p class="text-xl font-bold text-red-600 dark:text-red-400">-{{ formatCurrency(simulatedResults.whtAmount, investment.currency) }}</p>
                         </div>
-                        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border-2 border-indigo-100 dark:border-indigo-900/50 transition-colors">
-                            <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Effective MPY</p>
-                            <p class="text-2xl sm:text-3xl font-black text-purple-600 dark:text-purple-400">{{ simulatedResults.effectiveMPY.toFixed(2) }}%</p>
-                            <p class="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 mt-2">Monthly rate</p>
+                        <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-lg border-2 border-green-100 dark:border-green-900/50 transition-colors">
+                            <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Net Interest</p>
+                            <p class="text-2xl font-black text-green-600 dark:text-green-500">{{ formatCurrency(simulatedResults.totalInterest, investment.currency) }}</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow border border-indigo-100 dark:border-indigo-900/50 transition-colors">
+                            <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Estimated APY</p>
+                            <p class="text-xl font-bold text-indigo-600 dark:text-indigo-400">{{ simulatedResults.apy.toFixed(2) }}%</p>
                         </div>
                     </div>
 
@@ -514,15 +554,19 @@ const handleTerminate = async () => {
                                     <tr>
                                         <th class="text-left py-2 text-gray-600 dark:text-gray-400 font-medium">Day</th>
                                         <th class="text-left py-2 text-gray-600 dark:text-gray-400 font-medium">Date</th>
-                                        <th class="text-right py-2 text-gray-600 dark:text-gray-400 font-medium">Daily Interest</th>
-                                        <th class="text-right py-2 text-gray-600 dark:text-gray-400 font-medium">Running Balance</th>
+                                        <th class="text-right py-2 text-gray-600 dark:text-gray-400 font-medium">Gross Int.</th>
+                                        <th class="text-right py-2 text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">Tax (WHT)</th>
+                                        <th class="text-right py-2 text-gray-600 dark:text-gray-400 font-medium">Net Int.</th>
+                                        <th class="text-right py-2 text-gray-600 dark:text-gray-400 font-medium">Balance</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr v-for="day in projectionPreview" :key="day.day" class="border-b border-gray-50 dark:border-gray-700/50">
                                         <td class="py-2 text-gray-700 dark:text-gray-300">{{ day.day }}</td>
                                         <td class="py-2 text-gray-600 dark:text-gray-400">{{ day.date }}</td>
-                                        <td class="py-2 text-right font-medium text-green-600 dark:text-green-400">{{ formatCurrency(day.interest, investment.currency) }}</td>
+                                        <td class="py-2 text-right text-gray-600 dark:text-gray-400">{{ formatCurrency(day.interest, investment.currency) }}</td>
+                                        <td class="py-2 text-right text-red-500 dark:text-red-400">-{{ formatCurrency(day.wht, investment.currency) }}</td>
+                                        <td class="py-2 text-right font-medium text-green-600 dark:text-green-400">{{ formatCurrency(day.netInterest, investment.currency) }}</td>
                                         <td class="py-2 text-right font-bold text-indigo-900 dark:text-indigo-100">{{ formatCurrency(day.balance, investment.currency) }}</td>
                                     </tr>
                                 </tbody>

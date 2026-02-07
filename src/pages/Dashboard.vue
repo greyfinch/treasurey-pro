@@ -29,20 +29,23 @@ const selectedCurrency = ref('')
 const maturityDateStart = ref('')
 const maturityDateEnd = ref('')
 const currencies = ref<any[]>([])
+const taxSettings = ref({ whtRate: 0 })
 
 
 onMounted(async () => {
     try {
-        const [invData, bankData, fxData, currData] = await Promise.all([
+        const [invData, bankData, fxData, currData, taxData] = await Promise.all([
             mockService.getInvestments(),
             mockService.getBanks(),
             mockService.getFXRates(),
-            mockService.getCurrencies()
+            mockService.getCurrencies(),
+            mockService.getTaxSettings()
         ])
         investments.value = invData
         banks.value = bankData
         fxRates.value = fxData
         currencies.value = currData
+        taxSettings.value = taxData
     } finally {
 
         loading.value = false
@@ -95,18 +98,22 @@ const totalPrincipalBase = computed(() => {
     }, 0)
 })
 
-const totalROIBase = computed(() => {
-    return calculatePortfolioROI(filteredInvestments.value, targetDate.value, baseCurrency.value, fxRates.value).toNumber()
+const totalGrossROIBase = computed(() => {
+    return calculatePortfolioROI(filteredInvestments.value, targetDate.value, baseCurrency.value, fxRates.value, 0).toNumber()
+})
+
+const totalNetROIBase = computed(() => {
+    return calculatePortfolioROI(filteredInvestments.value, targetDate.value, baseCurrency.value, fxRates.value, taxSettings.value.whtRate).toNumber()
 })
 
 const todayROIBase = computed(() => {
-    return calculatePortfolioROI(filteredInvestments.value, new Date(), baseCurrency.value, fxRates.value).toNumber()
+    return calculatePortfolioROI(filteredInvestments.value, new Date(), baseCurrency.value, fxRates.value, taxSettings.value.whtRate).toNumber()
 })
 
 const roiTrend = computed(() => {
-    const yesterday = calculatePortfolioROI(filteredInvestments.value, dayjs().subtract(1, 'day').toDate(), baseCurrency.value, fxRates.value).toNumber()
+    const yesterday = calculatePortfolioROI(filteredInvestments.value, dayjs().subtract(1, 'day').toDate(), baseCurrency.value, fxRates.value, taxSettings.value.whtRate).toNumber()
     if (yesterday === 0) return 0
-    return Number(((todayROIBase.value - yesterday) / yesterday * 100).toFixed(2))
+    return Number(((totalNetROIBase.value - yesterday) / yesterday * 100).toFixed(2))
 })
 
 const subsidiaryBreakdown = computed(() => {
@@ -120,11 +127,13 @@ const subsidiaryBreakdown = computed(() => {
             const rate = fxRates.value.find(r => r.fromCurrency === inv.currency && r.toCurrency === baseCurrency.value)?.rate || 1
             return acc + (Number(inv.principal) * rate)
         }, 0)
-        const roi = calculatePortfolioROI(subInvs, targetDate.value, baseCurrency.value, fxRates.value).toNumber()
+        const grossRoi = calculatePortfolioROI(subInvs, targetDate.value, baseCurrency.value, fxRates.value, 0).toNumber()
+        const netRoi = calculatePortfolioROI(subInvs, targetDate.value, baseCurrency.value, fxRates.value, taxSettings.value.whtRate).toNumber()
         return {
             ...sub,
             principal,
-            roi
+            grossRoi,
+            netRoi
         }
     }).sort((a, b) => b.principal - a.principal)
 })
@@ -172,18 +181,24 @@ const clearFilters = () => {
         </div>
 
         <!-- KPIs -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <KPICard 
                 label="Total Invested Principal" 
                 :value="formatCurrency(totalPrincipalBase, baseCurrency)" 
             />
             <KPICard 
-                label="Accrued ROI (Selected Date)" 
-                :value="formatCurrency(totalROIBase, baseCurrency)"
-                trend-label="Returns calculated up to selected date"
+                label="Accrued ROI (Gross)" 
+                :value="formatCurrency(totalGrossROIBase, baseCurrency)"
+                trend-label="Total interest before tax"
             />
             <KPICard 
-                label="Today's ROI Performance" 
+                label="Net ROI (After Tax)" 
+                :value="formatCurrency(totalNetROIBase, baseCurrency)" 
+                trend-label="Net performance after WHT"
+                variant="money"
+            />
+            <KPICard 
+                label="Today's Performance" 
                 :value="formatCurrency(todayROIBase, baseCurrency)" 
                 :trend="roiTrend"
                 trend-label="vs Yesterday"
@@ -246,8 +261,9 @@ const clearFilters = () => {
                             <thead class="bg-gray-50 dark:bg-gray-900/30">
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Subsidiary</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Invested ({{ baseCurrency }})</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Accrued ROI</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Invested ({{ baseCurrency }})</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Gross ROI</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Net ROI</th>
                                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Allocation</th>
                                 </tr>
                             </thead>
@@ -259,7 +275,8 @@ const clearFilters = () => {
                                         </router-link>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-300">{{ formatCurrency(sub.principal, baseCurrency) }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-primary-600 dark:text-primary-400 font-semibold">{{ formatCurrency(sub.roi, baseCurrency) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500 dark:text-gray-400">{{ formatCurrency(sub.grossRoi, baseCurrency) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-money-600 dark:text-money-400 font-semibold">{{ formatCurrency(sub.netRoi, baseCurrency) }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
                                         <div class="flex items-center justify-end gap-2">
                                             <div class="w-24 bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
@@ -293,6 +310,7 @@ const clearFilters = () => {
                         v-else 
                         :investments="filteredInvestments" 
                         :target-date="targetDate"
+                        :wht-rate="taxSettings.whtRate"
                     />
                 </div>
             </div>

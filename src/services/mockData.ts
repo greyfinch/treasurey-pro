@@ -430,11 +430,19 @@ export interface NotificationSettings {
     enableInApp: boolean;
 }
 
+export interface TaxSettings {
+    whtRate: number; // Percentage, e.g., 10 for 10%
+}
+
 let MOCK_NOTIFICATION_SETTINGS: NotificationSettings = {
     maturityDays: 1,
     liquidityDays: 7,
     enableEmail: true,
     enableInApp: true
+};
+
+let MOCK_TAX_SETTINGS: TaxSettings = {
+    whtRate: 10
 };
 
 const AUDIT_LOGS: AuditLog[] = [
@@ -983,6 +991,21 @@ export const mockService = {
         });
     },
 
+    // Tax Settings
+    getTaxSettings: async (): Promise<TaxSettings> => {
+        return new Promise((resolve) => resolve(MOCK_TAX_SETTINGS));
+    },
+
+    updateTaxSettings: async (settings: TaxSettings): Promise<TaxSettings> => {
+        return new Promise((resolve) => {
+            const old = { ...MOCK_TAX_SETTINGS };
+            MOCK_TAX_SETTINGS = { ...settings };
+            logAction('settings:tax_update', MOCK_TAX_SETTINGS, [{ field: 'whtRate', old: old.whtRate, new: settings.whtRate }]);
+            resolve(MOCK_TAX_SETTINGS);
+        });
+    },
+
+    // Notification Settings
     getNotificationSettings: async (): Promise<NotificationSettings> => {
         return new Promise((resolve) => {
             setTimeout(() => resolve({ ...MOCK_NOTIFICATION_SETTINGS }), 300);

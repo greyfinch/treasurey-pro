@@ -8,7 +8,8 @@ import {
     Cog6ToothIcon,
     BuildingOfficeIcon,
     BuildingLibraryIcon,
-    BellAlertIcon
+    BellAlertIcon,
+    ReceiptPercentIcon
 } from '@heroicons/vue/24/outline'
 import CurrencySettings from './sections/CurrencySettings.vue'
 import FXRateSettings from './sections/FXRateSettings.vue'
@@ -16,6 +17,7 @@ import SecuritySettings from './sections/SecuritySettings.vue'
 import OrganisationSettings from './sections/OrganisationSettings.vue'
 import BankSettings from './sections/BankSettings.vue'
 import NotificationSettings from './sections/NotificationSettings.vue'
+import TaxSettings from './sections/TaxSettings.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -26,6 +28,7 @@ const tabs = [
     { id: 'organisations', name: 'Organisations', icon: BuildingOfficeIcon, component: OrganisationSettings },
     { id: 'banks', name: 'Partner Banks', icon: BuildingLibraryIcon, component: BankSettings },
     { id: 'notifications', name: 'Notifications', icon: BellAlertIcon, component: NotificationSettings },
+    { id: 'tax', name: 'Tax Settings', icon: ReceiptPercentIcon, component: TaxSettings },
     { id: 'security', name: 'Security', icon: ShieldCheckIcon, component: SecuritySettings },
 ]
 
