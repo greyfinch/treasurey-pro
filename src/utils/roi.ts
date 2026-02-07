@@ -40,7 +40,6 @@ export function calculateInvestmentROI({
     startDate,
     targetDate,
     maturityDate,
-    status,
     withdrawals = [],
     rollovers = [],
     whtRate = 0
