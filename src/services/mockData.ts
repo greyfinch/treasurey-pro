@@ -174,6 +174,7 @@ export interface Investment {
     status: 'ACTIVE' | 'MATURED' | 'TERMINATED';
     withdrawals: any[];
     rollovers: any[];
+    actualInterest?: string;
 }
 
 const generateInvestments = () => {
@@ -636,6 +637,21 @@ export const mockService = {
                 }
                 inv.status = 'TERMINATED';
                 logAction('investment:terminate', { investmentId });
+                resolve(inv);
+            }, 500);
+        });
+    },
+
+    reconcileInvestment: async (investmentId: string, actualInterest: string): Promise<any> => {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                const inv = MOCK_INVESTMENTS.find((i: any) => i.id === investmentId);
+                if (!inv) {
+                    reject('Investment not found');
+                    return;
+                }
+                inv.actualInterest = actualInterest;
+                logAction('investment:reconcile', { investmentId, actualInterest });
                 resolve(inv);
             }, 500);
         });

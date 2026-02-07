@@ -21,6 +21,7 @@ const fxRates = ref<any[]>([])
 const showWithdrawModal = ref(false)
 const showRolloverModal = ref(false)
 const showTerminateModal = ref(false)
+const showReconcileModal = ref(false)
 const isSubmitting = ref(false)
 
 const withdrawalForm = ref({
@@ -32,6 +33,10 @@ const withdrawalForm = ref({
 const rolloverForm = ref({
     amount: '',
     date: dayjs().format('YYYY-MM-DD')
+})
+
+const reconcileForm = ref({
+    actualInterest: ''
 })
 const targetDate = ref(new Date())
 
@@ -234,6 +239,13 @@ const displayStatus = computed(() => {
     return investment.value.status
 })
 
+const variance = computed(() => {
+    if (!investment.value?.actualInterest || !stats.value) return null
+    const actual = new Decimal(investment.value.actualInterest)
+    const expected = stats.value.interest
+    return actual.minus(expected).toNumber()
+})
+
 // Actions
 const handleWithdrawal = async () => {
     if (!withdrawalForm.value.amount) return
@@ -283,6 +295,22 @@ const handleTerminate = async () => {
         showTerminateModal.value = false
     } catch (error) {
         console.error('Failed to terminate investment:', error)
+    } finally {
+        isSubmitting.value = false
+    }
+}
+
+const handleReconciliation = async () => {
+    if (!reconcileForm.value.actualInterest) return
+    isSubmitting.value = true
+    try {
+        await mockService.reconcileInvestment(investment.value.id, reconcileForm.value.actualInterest)
+        // Refresh data
+        const data = await mockService.getInvestmentById(investment.value.id)
+        investment.value = data
+        showReconcileModal.value = false
+    } catch (error) {
+        console.error('Failed to reconcile investment:', error)
     } finally {
         isSubmitting.value = false
     }
@@ -406,6 +434,54 @@ const handleTerminate = async () => {
                                 <p class="text-lg font-bold text-gray-700 dark:text-gray-300">{{ formatCurrency(reportingPrincipal, baseCurrency) }}</p>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Reconciliation Block (For Matured Investments) -->
+                <div v-if="displayStatus === 'MATURED'" class="card border-amber-200 dark:border-amber-900/50 bg-amber-50/30 dark:bg-amber-900/10 transition-colors">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                        <div>
+                            <h3 class="font-bold text-amber-900 dark:text-amber-100 flex items-center gap-2">
+                                <ArrowPathIcon class="w-5 h-5 text-amber-500" />
+                                Bank Interest Reconciliation
+                            </h3>
+                            <p class="text-xs text-amber-700 dark:text-amber-400">Compare system projects against actual bank remittance</p>
+                        </div>
+                        <button 
+                            v-if="!investment.actualInterest"
+                            @click="showReconcileModal = true"
+                            class="px-4 py-2 text-sm font-semibold text-white bg-amber-600 dark:bg-amber-500 hover:bg-amber-700 dark:hover:bg-amber-600 rounded-lg shadow-sm transition-colors"
+                        >
+                            Record Bank Remittance
+                        </button>
+                    </div>
+
+                    <div v-if="investment.actualInterest" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-white dark:bg-gray-800 p-3 rounded-lg border border-amber-100 dark:border-amber-900/30">
+                            <p class="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Expected (System)</p>
+                            <p class="text-lg font-bold text-gray-900 dark:text-white">{{ formatCurrency(accumulatedROI, investment.currency) }}</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 p-3 rounded-lg border border-amber-100 dark:border-amber-900/30">
+                            <div class="flex justify-between items-center mb-1">
+                                <p class="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">Actual (Bank)</p>
+                                <button @click="showReconcileModal = true" class="text-[10px] text-primary-600 dark:text-primary-400 font-bold hover:underline">Edit</button>
+                            </div>
+                            <p class="text-lg font-bold text-gray-900 dark:text-white">{{ formatCurrency(investment.actualInterest, investment.currency) }}</p>
+                        </div>
+                        <div :class="[
+                            'p-3 rounded-lg border',
+                            variance && variance >= 0 
+                                ? 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-800' 
+                                : 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800'
+                        ]">
+                            <p class="text-[10px] uppercase tracking-widest mb-1" :class="variance && variance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">Variance</p>
+                            <p class="text-xl font-black" :class="variance && variance >= 0 ? 'text-green-700 dark:text-green-500' : 'text-red-700 dark:text-red-500'">
+                                {{ variance && variance > 0 ? '+' : '' }}{{ formatCurrency(variance || 0, investment.currency) }}
+                            </p>
+                        </div>
+                    </div>
+                    <div v-else class="p-6 text-center border-2 border-dashed border-amber-200 dark:border-amber-900/30 rounded-xl">
+                         <p class="text-sm text-amber-700 dark:text-amber-400 italic">No bank remittance recorded yet for this matured investment.</p>
                     </div>
                 </div>
 
@@ -751,6 +827,40 @@ const handleTerminate = async () => {
                     >
                         Cancel
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reconciliation Modal -->
+    <div v-if="showReconcileModal" class="fixed inset-0 z-50 overflow-y-auto bg-gray-500/90 dark:bg-gray-900/90 backdrop-blur-sm" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full border border-gray-100 dark:border-gray-700">
+                <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">Record Actual Bank Interest</h3>
+                        <button @click="showReconcileModal = false" class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+                            <XMarkIcon class="h-6 w-6" />
+                        </button>
+                    </div>
+                    <form @submit.prevent="handleReconciliation" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Actual Interest Received</label>
+                             <div class="mt-1 relative rounded-md shadow-sm">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 dark:text-gray-400 sm:text-sm">{{ investment.currency === 'NGN' ? '₦' : '$' }}</span>
+                                </div>
+                                <input type="number" v-model="reconcileForm.actualInterest" required class="focus:ring-amber-500 focus:border-amber-500 block w-full pl-7 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md p-2 border bg-white dark:bg-gray-900 text-gray-900 dark:text-white" placeholder="0.00">
+                            </div>
+                            <p class="mt-2 text-[10px] text-gray-500 dark:text-gray-400 italic">Enter the final net interest amount remitted by the bank for this investment.</p>
+                        </div>
+                        <div class="mt-5 sm:mt-6">
+                            <button type="submit" :disabled="isSubmitting" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-amber-600 text-base font-medium text-white hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 sm:text-sm disabled:opacity-50 transition-colors">
+                                {{ isSubmitting ? 'Recording...' : 'Save Reconciliation' }}
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
