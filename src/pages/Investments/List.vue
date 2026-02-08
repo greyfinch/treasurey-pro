@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { PlusIcon, XMarkIcon, CalendarIcon } from '@heroicons/vue/24/outline'
+import { PlusIcon, XMarkIcon, CalendarIcon, BanknotesIcon, DocumentTextIcon } from '@heroicons/vue/24/outline'
 import dayjs from 'dayjs'
 import InvestmentsTable from '../../components/InvestmentsTable.vue'
 import FilterPanel from '../../components/FilterPanel.vue'
 import BankFormModal from '../../components/BankFormModal.vue'
-import { mockService, ORGANISATIONS } from '../../services/mockData'
+import TreasuryBillsTable from '../../components/Investments/TreasuryBillsTable.vue'
+import TreasuryBillForm from '../../components/Investments/TreasuryBillForm.vue'
+import { 
+    mockService, 
+    ORGANISATIONS, 
+    TreasuryBillStatus 
+} from '../../services/mockData'
+import type { TreasuryBill } from '../../services/mockData'
 import { formatCurrency } from '../../utils/dateHelpers'
 import { calculatePortfolioROI } from '../../utils/roi'
 import { organisationService } from '../../services/organisationService'
@@ -19,9 +26,13 @@ const { user, canDo, isGroupScope } = usePermissions()
 
 const loading = ref(true)
 const investments = ref<any[]>([])
+const treasuryBills = ref<TreasuryBill[]>([])
 const banks = ref<any[]>([])
 const bankBalances = ref<any[]>([])
 const targetDate = ref(new Date())
+
+// Navigation
+const activeTab = ref<'deposits' | 'tbills'>('deposits')
 
 // Filters
 const selectedBankId = ref('')
@@ -98,7 +109,13 @@ const newInvestment = ref({
     currency: 'NGN' as any,
     dailyRate: '',
     startDate: dayjs().format('YYYY-MM-DD'),
-    maturityDate: dayjs().add(1, 'year').format('YYYY-MM-DD')
+    maturityDate: dayjs().add(1, 'year').format('YYYY-MM-DD'),
+    type: 'BANK_DEPOSIT' as 'BANK_DEPOSIT' | 'TREASURY_BILL' // Default
+})
+
+const newTreasuryBill = ref<Partial<TreasuryBill>>({
+    currency: 'NGN',
+    status: TreasuryBillStatus.PENDING_APPROVAL
 })
 
 
@@ -115,11 +132,11 @@ watch(showModal, async (val: boolean) => {
            const orgId = activeOrganisation.value.type === 'GROUP' ? null : activeOrganisation.value.id
            if (orgId) {
                bankBalances.value = await mockService.getBankBalancesByOrganisationId(orgId)
-           } else {
-               // If group, we might want to fetch all or lazily fetch when subsidiary selected
-               // For simplicity, let's just fetch all balances or handle it in the watcher below
            }
         }
+        
+        // Set type based on active tab
+        newInvestment.value.type = (activeTab.value === 'tbills' ? 'TREASURY_BILL' : 'BANK_DEPOSIT') as 'BANK_DEPOSIT' | 'TREASURY_BILL'
     }
 })
 
@@ -172,16 +189,18 @@ onMounted(async () => {
 
 const fetchData = async () => {
     try {
-        const [invData, bankData, currData, taxData] = await Promise.all([
+        const [invData, bankData, currData, taxData, tbillData] = await Promise.all([
             mockService.getInvestments(),
             mockService.getBanks(),
             mockService.getCurrencies(),
-            mockService.getTaxSettings()
+            mockService.getTaxSettings(),
+            mockService.getTreasuryBills()
         ])
         investments.value = invData
         banks.value = bankData
         currencies.value = currData
         taxSettings.value = taxData
+        treasuryBills.value = tbillData
     } finally {
 
         loading.value = false
@@ -197,18 +216,33 @@ const getDisplayStatus = (inv: any) => {
 // Scoped Investments based on active organisation
 const scopedInvestments = computed(() => {
     // SECURITY: If user is NOT group-scoped, they ONLY see their own organisation
+    const targetData = activeTab.value === 'tbills' ? treasuryBills.value : investments.value
+
     if (!isGroupScope.value) {
-        return investments.value.filter(inv => inv.organisationId === user.organisationId)
+        return targetData.filter(inv => inv.organisationId === user.organisationId)
     }
 
     if (!activeOrganisation.value) return []
-    if (activeOrganisation.value.type === 'GROUP') return investments.value
-    return investments.value.filter(inv => inv.organisationId === activeOrganisation.value?.id)
+    if (activeOrganisation.value.type === 'GROUP') return targetData
+    return targetData.filter(inv => inv.organisationId === activeOrganisation.value?.id)
+})
+
+const currentTypeInvestments = computed(() => {
+    return scopedInvestments.value.filter(inv => {
+        if (activeTab.value === 'deposits') return !inv.type || inv.type === 'BANK_DEPOSIT'
+        // For tbills tab, scopedInvestments is already the treasuryBills array, so we just return it
+        // But we should ensure we aren't mixing types if treasuryBills array somehow got pollution (unlikely)
+        if (activeTab.value === 'tbills') return true 
+        return true
+    })
 })
 
 const filteredInvestments = computed(() => {
     return scopedInvestments.value.filter(inv => {
-        const matchBank = !selectedBankId.value || inv.bankId === selectedBankId.value
+        // Type filter is implicit by the data source switch in scopedInvestments
+        if (activeTab.value === 'deposits' && (inv.type && inv.type !== 'BANK_DEPOSIT')) return false
+
+        const matchBank = !selectedBankId.value || (inv.bankId === selectedBankId.value || (inv as any).counterpartyId === selectedBankId.value)
         const matchStatus = !selectedStatus.value || getDisplayStatus(inv) === selectedStatus.value
         const matchCurrency = !selectedCurrency.value || inv.currency === selectedCurrency.value
         
@@ -222,31 +256,81 @@ const filteredInvestments = computed(() => {
 
 
 const totalPrincipal = computed(() => {
-    return scopedInvestments.value.reduce((sum, inv) => sum + (Number(inv.principal) || 0), 0)
+    return currentTypeInvestments.value.reduce((sum, inv) => {
+        if (activeTab.value === 'tbills') {
+            const tbill = inv as TreasuryBill
+            return sum + (Number(tbill.purchasePrice) || 0)
+        }
+        return sum + (Number(inv.principal) || 0)
+    }, 0)
 })
 
 const totalAccruedROI = computed(() => {
-    return calculatePortfolioROI(scopedInvestments.value, targetDate.value, 'NGN', [], 0).toNumber()
+    const investmentsToCalc = currentTypeInvestments.value.map(inv => {
+        if (activeTab.value === 'tbills') {
+            const tbill = inv as TreasuryBill
+            const principal = Number(tbill.purchasePrice)
+            const faceValue = Number(tbill.faceValue)
+            const interest = faceValue - principal
+            const tenor = tbill.tenorDays || 91
+            // derived daily rate
+            const dailyRate = principal ? (interest / principal) / tenor : 0
+
+            return {
+                ...tbill,
+                principal,
+                dailyRate,
+                startDate: tbill.tradeDate,
+                maturityDate: tbill.maturityDate,
+                status: tbill.status === 'ACTIVE' ? 'ACTIVE' : 'MATURED', // align status
+                currency: tbill.currency
+            }
+        }
+        return inv
+    })
+    return calculatePortfolioROI(investmentsToCalc, targetDate.value, 'NGN', [], 0).toNumber()
 })
 
 const totalNetROI = computed(() => {
-    return calculatePortfolioROI(scopedInvestments.value, targetDate.value, 'NGN', [], taxSettings.value.whtRate).toNumber()
+    // Re-use logic for consistency, just add tax
+    const investmentsToCalc = currentTypeInvestments.value.map(inv => {
+        if (activeTab.value === 'tbills') {
+            const tbill = inv as TreasuryBill
+            const principal = Number(tbill.purchasePrice)
+            const faceValue = Number(tbill.faceValue)
+            const interest = faceValue - principal
+            const tenor = tbill.tenorDays || 91
+            const dailyRate = principal ? (interest / principal) / tenor : 0
+
+            return {
+                ...tbill,
+                principal,
+                dailyRate,
+                startDate: tbill.tradeDate,
+                maturityDate: tbill.maturityDate,
+                status: tbill.status === 'ACTIVE' ? 'ACTIVE' : 'MATURED',
+                currency: tbill.currency
+            }
+        }
+        return inv
+    })
+    return calculatePortfolioROI(investmentsToCalc, targetDate.value, 'NGN', [], taxSettings.value.whtRate).toNumber()
 })
 
 
 const cashLockInMetrics = computed(() => {
-    const totalPrincipalValue = scopedInvestments.value.reduce((sum, inv) => sum + (Number(inv.principal) || 0), 0)
+    const totalPrincipalValue = currentTypeInvestments.value.reduce((sum, inv) => sum + (Number(inv.principal) || 0), 0)
     const today = dayjs()
     const daysAhead = Math.max(1, Number(liquidDays.value) || 1)
     const nextWeekStart = today.add(1, 'day').startOf('day')
     const nextWeekEnd = today.add(daysAhead, 'day').endOf('day')
 
-    const lockedPrincipal = scopedInvestments.value.reduce((sum, inv) => {
+    const lockedPrincipal = currentTypeInvestments.value.reduce((sum, inv) => {
         const isLocked = inv.status === 'ACTIVE' && dayjs(inv.maturityDate).isAfter(today, 'day')
         return sum + (isLocked ? Number(inv.principal) || 0 : 0)
     }, 0)
 
-    const liquidNextWeek = scopedInvestments.value.reduce(
+    const liquidNextWeek = currentTypeInvestments.value.reduce(
         (acc: { amount: number; count: number }, inv) => {
             const maturity = dayjs(inv.maturityDate)
             const isLiquidNextWeek = inv.status === 'ACTIVE' && maturity.isAfter(nextWeekStart) && maturity.isBefore(nextWeekEnd)
@@ -303,6 +387,8 @@ const handleAddInvestment = async () => {
         await fetchData()
         showModal.value = false
         // Reset form
+        showModal.value = false
+        // Reset form
         newInvestment.value = {
             organisationId: activeOrganisation.value?.type === 'SUBSIDIARY' ? activeOrganisation.value.id : '',
             bankId: '',
@@ -310,11 +396,31 @@ const handleAddInvestment = async () => {
             currency: 'NGN' as any,
             dailyRate: '',
             startDate: dayjs().format('YYYY-MM-DD'),
-            maturityDate: dayjs().add(1, 'year').format('YYYY-MM-DD')
+            maturityDate: dayjs().add(1, 'year').format('YYYY-MM-DD'),
+            type: (activeTab.value === 'tbills' ? 'TREASURY_BILL' : 'BANK_DEPOSIT') as 'BANK_DEPOSIT' | 'TREASURY_BILL'
         }
 
 
 
+    } finally {
+        isSubmitting.value = false
+    }
+}
+
+const handleCreateTBill = async (data: any) => {
+    isSubmitting.value = true
+    try {
+        await mockService.createTreasuryBill(data)
+        await fetchData()
+        showModal.value = false
+        // Reset form
+        newTreasuryBill.value = {
+            currency: 'NGN',
+            status: TreasuryBillStatus.PENDING_APPROVAL,
+            organisationId: newInvestment.value.organisationId
+        }
+    } catch (error) {
+        console.error('Failed to create T-Bill:', error)
     } finally {
         isSubmitting.value = false
     }
@@ -360,8 +466,37 @@ const confirmTerminate = async () => {
             </button>
         </div>
 
-        <div class="grid grid-cols-1 gap-6">
-            <!-- Active Filter Banner -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Sidebar -->
+            <div class="lg:col-span-2 space-y-2">
+                 <button 
+                    @click="activeTab = 'deposits'"
+                    :class="[
+                        'w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200',
+                        activeTab === 'deposits' 
+                            ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 shadow-sm' 
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    ]"
+                 >
+                    <BanknotesIcon class="w-5 h-5" />
+                    Bank Deposits
+                 </button>
+                 <button 
+                    @click="activeTab = 'tbills'"
+                    :class="[
+                        'w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200',
+                        activeTab === 'tbills' 
+                            ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 shadow-sm' 
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    ]"
+                 >
+                    <DocumentTextIcon class="w-5 h-5" />
+                    Treasury Bills
+                 </button>
+            </div>
+
+            <div class="lg:col-span-10 space-y-6">
+                <!-- Active Filter Banner -->
             <transition
                 enter-active-class="transition duration-300 ease-out"
                 enter-from-class="opacity-0 -translate-y-4"
@@ -466,7 +601,12 @@ const confirmTerminate = async () => {
                     </div>
                 </div>
             </div>
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+            <div v-if="activeTab === 'tbills'" class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                <TreasuryBillsTable :investments="filteredInvestments" />
+            </div>
+
+            <div v-if="activeTab === 'deposits'" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <!-- Main List -->
                 <div class="lg:col-span-3 space-y-4">
                      <!-- Table -->
@@ -497,7 +637,10 @@ const confirmTerminate = async () => {
             </div>
         </div>
 
-        <!-- Add Modal -->
+        </div>
+    </div>
+
+    <!-- Add Modal -->
         <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto bg-gray-500/90 dark:bg-gray-950/90 transition-colors" aria-labelledby="modal-title" role="dialog" aria-modal="true">
             <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
 
@@ -506,13 +649,23 @@ const confirmTerminate = async () => {
                 <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border dark:border-gray-700">
                     <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4 transition-colors">
                         <div class="flex justify-between items-start mb-4">
-                            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">New Investment</h3>
+                            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
+                                {{ activeTab === 'tbills' ? 'New Treasury Bill' : 'New Investment' }}
+                            </h3>
                             <button @click="showModal = false" class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors">
                                 <XMarkIcon class="h-6 w-6" />
                             </button>
                         </div>
                         
-                        <form @submit.prevent="handleAddInvestment" class="space-y-4">
+                        <div v-if="activeTab === 'tbills'">
+                             <TreasuryBillForm
+                                v-model="newTreasuryBill"
+                                :is-submitting="isSubmitting"
+                                @submit="handleCreateTBill"
+                                @cancel="showModal = false"
+                             />
+                        </div>
+                        <form v-else @submit.prevent="handleAddInvestment" class="space-y-4">
                             <div v-if="activeOrganisation?.type === 'GROUP'">
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Subsidiary</label>
                                 <select v-model="newInvestment.organisationId" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors">
@@ -596,7 +749,7 @@ const confirmTerminate = async () => {
             :is-open="showBankModal"
             @close="showBankModal = false"
             @saved="handleBankSaved"
-        />
+        ></BankFormModal>
 
         <!-- Terminate Confirmation Modal -->
         <div v-if="showTerminateModal" class="fixed inset-0 z-50 overflow-y-auto bg-gray-500/90 dark:bg-gray-950/90 transition-colors" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -642,6 +795,6 @@ const confirmTerminate = async () => {
                     </div>
                 </div>
             </div>
-        </div>
+
     </div>
 </template>

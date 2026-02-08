@@ -5,6 +5,7 @@ import Dashboard from '../pages/Dashboard.vue'
 const Login = () => import('../pages/Login.vue')
 const InvestmentList = () => import('../pages/Investments/List.vue')
 const InvestmentDetail = () => import('../pages/Investments/Detail.vue')
+const TreasuryBillDetail = () => import('../pages/Investments/TreasuryBillDetail.vue')
 const SubsidiaryDetail = () => import('../pages/Subsidiaries/Detail.vue')
 const Settings = () => import('../pages/Settings/Settings.vue')
 const AuditLogs = () => import('../pages/AuditLogs.vue')
@@ -53,6 +54,12 @@ const routes: RouteRecordRaw[] = [
         path: '/investments',
         name: 'Investments',
         component: InvestmentList,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/investments/tbills/:id',
+        name: 'TreasuryBillDetail',
+        component: TreasuryBillDetail,
         meta: { requiresAuth: true }
     },
     {

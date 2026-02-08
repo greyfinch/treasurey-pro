@@ -2,13 +2,36 @@ import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';
 
 // Realistic Bank Names in Nigeria
-let BANKS = [
+export const BANKS = [
     { id: 'bank-zenith', name: 'Zenith Bank' },
     { id: 'bank-gtb', name: 'Guaranty Trust Bank' },
     { id: 'bank-uba', name: 'United Bank for Africa' },
     { id: 'bank-access', name: 'Access Bank' },
     { id: 'bank-first', name: 'First Bank' }
 ];
+
+export interface Bank {
+    id: string;
+    name: string;
+}
+
+export const TreasuryBillStatus = {
+    PENDING_APPROVAL: 'PENDING_APPROVAL',
+    ACTIVE: 'ACTIVE',
+    MATURED: 'MATURED',
+    ROLLED_OVER: 'ROLLED_OVER',
+    LIQUIDATED_EARLY: 'LIQUIDATED_EARLY'
+} as const;
+export type TreasuryBillStatus = typeof TreasuryBillStatus[keyof typeof TreasuryBillStatus];
+
+export const TreasuryBillEventType = {
+    CREATED: 'CREATED',
+    APPROVED: 'APPROVED',
+    ROLLED_OVER: 'ROLLED_OVER',
+    MATURED: 'MATURED',
+    EARLY_LIQUIDATION: 'EARLY_LIQUIDATION'
+} as const;
+export type TreasuryBillEventType = typeof TreasuryBillEventType[keyof typeof TreasuryBillEventType];
 
 export type OrgType = 'GROUP' | 'SUBSIDIARY';
 
@@ -263,9 +286,50 @@ export interface Investment {
     startDate: Date;
     maturityDate: Date;
     status: 'ACTIVE' | 'MATURED' | 'TERMINATED';
+    type?: 'BANK_DEPOSIT' | 'TREASURY_BILL'; // Added type
     withdrawals: any[];
     rollovers: any[];
     actualInterest?: string;
+}
+
+export interface TreasuryBill {
+    id: string;
+    organisationId: string;
+    subsidiaryId: string;
+    referenceCode: string;
+    currency: CurrencyCode;
+    faceValue: string;
+    purchasePrice: string;
+    discountRate: string;
+    effectiveYield: string;
+    tradeDate: Date;
+    settlementDate: Date;
+    maturityDate: Date;
+    tenorDays: number;
+    counterpartyId: string;
+    counterparty: Bank;
+    settlementAccountId: string; // ID of BankAccount
+    status: TreasuryBillStatus;
+    approvalRequestId?: string;
+}
+
+export interface TreasuryBillAccrual {
+    id: string;
+    treasuryBillId: string;
+    accrualDate: Date;
+    accruedAmount: string;
+    bookValue: string;
+}
+
+export interface TreasuryBillEvent {
+    id: string;
+    treasuryBillId: string;
+    eventType: TreasuryBillEventType;
+    amount?: string;
+    eventDate: Date;
+    notes?: string;
+    createdById: string;
+    createdBy: string; // User Name
 }
 
 const generateInvestments = () => {
@@ -488,8 +552,83 @@ const generateInvestments = () => {
         rollovers: []
     });
 
+    // 9. Treasury Bill - 91 Days
+    const tb1StartDate = today.subtract(10, 'day');
+    investments.push({
+        id: uuidv4(),
+        organisationId: 'org-holdco',
+        bankId: BANKS[0]!.id, // Custodian Bank
+        bank: BANKS[0]!,
+        principal: '500000000', // 500M
+        currency: CurrencyCode.NGN,
+        dailyRate: '0.00045', // Implied daily rate from discount
+        startDate: tb1StartDate.toDate(),
+        maturityDate: tb1StartDate.add(91, 'day').toDate(),
+        status: 'ACTIVE',
+        type: 'TREASURY_BILL',
+        withdrawals: [],
+        rollovers: []
+    });
+
+    // 10. Treasury Bill - 364 Days
+    const tb2StartDate = today.subtract(60, 'day');
+    investments.push({
+        id: uuidv4(),
+        organisationId: 'org-foods',
+        bankId: BANKS[1]!.id,
+        bank: BANKS[1]!,
+        principal: '100000000', // 100M
+        currency: CurrencyCode.NGN,
+        dailyRate: '0.00052',
+        startDate: tb2StartDate.toDate(),
+        maturityDate: tb2StartDate.add(364, 'day').toDate(),
+        status: 'ACTIVE',
+        type: 'TREASURY_BILL',
+        withdrawals: [],
+        rollovers: []
+    });
+
+    // Ensure existing items have default type
+    investments.forEach(inv => {
+        if (!inv.type) inv.type = 'BANK_DEPOSIT';
+    });
+
     return investments;
 };
+
+// --- Mock Treasury Bills ---
+export const MOCK_TREASURY_BILLS: TreasuryBill[] = [];
+
+// Helper to generate initial T-Bills
+const generateTreasuryBills = (): TreasuryBill[] => {
+    const tBills: TreasuryBill[] = [];
+    const today = dayjs();
+
+    // 1. Active T-Bill (91 Days)
+    tBills.push({
+        id: uuidv4(),
+        organisationId: 'org-holdco',
+        subsidiaryId: 'sub-acme', // Assuming Acme Foods
+        referenceCode: 'TB-2026-001',
+        currency: CurrencyCode.NGN,
+        faceValue: '100000000', // 100M
+        purchasePrice: '96500000', // 96.5M
+        discountRate: '14.00',
+        effectiveYield: '14.50',
+        tradeDate: today.subtract(45, 'day').toDate(),
+        settlementDate: today.subtract(43, 'day').toDate(),
+        maturityDate: today.subtract(43, 'day').add(91, 'day').toDate(),
+        tenorDays: 91,
+        counterpartyId: BANKS[2]!.id, // Zenith
+        counterparty: BANKS[2]!,
+        settlementAccountId: 'acc-zenith-ngn', // Mock ID
+        status: TreasuryBillStatus.ACTIVE
+    });
+
+    return tBills;
+};
+
+MOCK_TREASURY_BILLS.push(...generateTreasuryBills());
 
 const MOCK_INVESTMENTS = generateInvestments();
 
@@ -1228,6 +1367,85 @@ export const mockService = {
                 BALANCE_HISTORY = BALANCE_HISTORY.filter(h => h.bankBalanceId !== balanceId);
 
                 logAction('bank_balance:delete', { balanceId });
+                resolve();
+            }, 500);
+        });
+    },
+
+    // --- Treasury Bills Management ---
+    getTreasuryBills: async (): Promise<TreasuryBill[]> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve([...MOCK_TREASURY_BILLS]);
+            }, 300);
+        });
+    },
+
+    getTreasuryBillById: async (id: string): Promise<TreasuryBill | undefined> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve(MOCK_TREASURY_BILLS.find(tb => tb.id === id));
+            }, 200);
+        });
+    },
+
+    createTreasuryBill: async (data: Omit<TreasuryBill, 'id' | 'status' | 'counterparty'>): Promise<TreasuryBill> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const counterparty = BANKS.find(b => b.id === data.counterpartyId);
+                if (!counterparty) throw new Error('Invalid counterparty');
+
+                const newTBill: TreasuryBill = {
+                    ...data,
+                    id: uuidv4(),
+                    status: TreasuryBillStatus.PENDING_APPROVAL,
+                    counterparty
+                };
+                MOCK_TREASURY_BILLS.push(newTBill);
+
+                // Create initial event
+                const event: TreasuryBillEvent = {
+                    id: uuidv4(),
+                    treasuryBillId: newTBill.id,
+                    eventType: TreasuryBillEventType.CREATED,
+                    eventDate: new Date(),
+                    createdById: CURRENT_USER.id,
+                    createdBy: CURRENT_USER.name
+                };
+                // In a real app we would save this event
+                console.log('T-Bill Event:', event);
+
+                logAction('tbill:create', newTBill);
+                resolve(newTBill);
+            }, 500);
+        });
+    },
+
+    rolloverTreasuryBill: async (id: string, data: any): Promise<TreasuryBill> => {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                const tbill = MOCK_TREASURY_BILLS.find(t => t.id === id);
+                if (!tbill) return reject('T-Bill not found');
+
+                tbill.status = TreasuryBillStatus.ROLLED_OVER;
+
+                // Create new T-Bill (child) logic would go here
+                // For mock, just update status
+
+                logAction('tbill:rollover', { id, data });
+                resolve(tbill);
+            }, 500);
+        });
+    },
+
+    liquidateTreasuryBill: async (id: string): Promise<void> => {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                const tbill = MOCK_TREASURY_BILLS.find(t => t.id === id);
+                if (!tbill) return reject('T-Bill not found');
+
+                tbill.status = TreasuryBillStatus.LIQUIDATED_EARLY;
+                logAction('tbill:liquidate', { id });
                 resolve();
             }, 500);
         });
