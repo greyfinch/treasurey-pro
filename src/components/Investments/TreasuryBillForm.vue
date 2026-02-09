@@ -68,23 +68,22 @@ const derivedMetrics = computed(() => {
     const tenor = end.diff(start, 'day');
 
     let yieldRate = 0;
+    let roi = 0;
     if (face > 0 && price > 0 && tenor > 0) {
-        // Simple Yield = ((Face - Price) / Price) * (365 / Tenor)
-        yieldRate = ((face - price) / price) * (365 / tenor) * 100;
+        // ROI for the period = ((Face - Price) / Price) * 100
+        roi = ((face - price) / price) * 100;
+        
+        // Annualized Yield = ROI * (365 / Tenor)
+        yieldRate = roi * (365 / tenor);
     }
 
-    // Discount Rate implied from price if not set manually
-    // Discount = ((Face - Price) / Face) * (364 / Tenor) usually, but simplify
-    
     return {
         tenor,
         yieldRate: yieldRate.toFixed(2),
+        roi: roi.toFixed(2),
         profit: (face - price).toFixed(2)
     };
 });
-
-// Watch for face/discount/yield inputs to auto-calc price? 
-// For now, let user input Face and Price (most common in primary/secondary market)
 
 const handleSubmit = () => {
     emit('submit', {
@@ -169,8 +168,8 @@ const handleSubmit = () => {
         <div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
             <div class="grid grid-cols-3 gap-4 text-center">
                 <div>
-                    <span class="block text-xs text-gray-500 dark:text-gray-400 uppercase">Implied Yield</span>
-                    <span class="block text-lg font-bold text-green-600 dark:text-green-400">{{ derivedMetrics.yieldRate }}%</span>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400 uppercase">ROI ({{ derivedMetrics.tenor }} Days)</span>
+                    <span class="block text-lg font-bold text-green-600 dark:text-green-400">{{ derivedMetrics.roi }}%</span>
                 </div>
                 <div>
                     <span class="block text-xs text-gray-500 dark:text-gray-400 uppercase">Tenor</span>
