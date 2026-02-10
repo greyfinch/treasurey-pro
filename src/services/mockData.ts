@@ -258,13 +258,13 @@ export let CURRENT_USER: User = {
 };
 
 export const MOCK_USERS = [
-    { username: 'cfo', password: 'password', id: 'user-1', name: 'Obi Wan (Group CFO)', role: 'GROUP_CFO' as Role, organisationId: 'org-holdco' },
-    { username: 'treasury', password: 'password', id: 'user-2', name: 'Yoda (Group Treasury)', role: 'GROUP_TREASURY_MANAGER' as Role, organisationId: 'org-holdco' },
-    { username: 'manager_foods', password: 'password', id: 'user-3', name: 'Anakin (Acme Foods Manager)', role: 'SUB_FINANCE_MANAGER' as Role, organisationId: 'org-foods' },
-    { username: 'officer_foods', password: 'password', id: 'user-4', name: 'Ahsoka (Acme Foods Officer)', role: 'SUB_FINANCE_OFFICER' as Role, organisationId: 'org-foods' },
-    { username: 'viewer_foods', password: 'password', id: 'user-8', name: 'Jar Jar (Foods Viewer)', role: 'SUB_VIEWER' as Role, organisationId: 'org-foods' },
-    { username: 'manager_transport', password: 'password', id: 'user-5', name: 'Mace Windu (Acme Transport Manager)', role: 'SUB_FINANCE_MANAGER' as Role, organisationId: 'org-transport' },
-    { username: 'officer_transport', password: 'password', id: 'user-10', name: 'Han Solo (Transport Officer)', role: 'SUB_FINANCE_OFFICER' as Role, organisationId: 'org-transport' },
+    { username: 'cfo', password: 'password', id: 'user-1', name: 'Obi Wan', role: 'GROUP_CFO' as Role, organisationId: 'org-holdco' },
+    { username: 'treasury', password: 'password', id: 'user-2', name: 'Yoda', role: 'GROUP_TREASURY_MANAGER' as Role, organisationId: 'org-holdco' },
+    { username: 'manager_foods', password: 'password', id: 'user-3', name: 'Anakin', role: 'SUB_FINANCE_MANAGER' as Role, organisationId: 'org-foods' },
+    { username: 'officer_foods', password: 'password', id: 'user-4', name: 'Ahsoka', role: 'SUB_FINANCE_OFFICER' as Role, organisationId: 'org-foods' },
+    { username: 'viewer_foods', password: 'password', id: 'user-8', name: 'Jar Jar', role: 'SUB_VIEWER' as Role, organisationId: 'org-foods' },
+    { username: 'manager_transport', password: 'password', id: 'user-5', name: 'Mace Windu', role: 'SUB_FINANCE_MANAGER' as Role, organisationId: 'org-transport' },
+    { username: 'officer_transport', password: 'password', id: 'user-10', name: 'Han Solo', role: 'SUB_FINANCE_OFFICER' as Role, organisationId: 'org-transport' },
     { username: 'viewer_transport', password: 'password', id: 'user-11', name: 'Chewbacca (Transport Viewer)', role: 'SUB_VIEWER' as Role, organisationId: 'org-transport' },
     { username: 'manager_energy', password: 'password', id: 'user-12', name: 'Plo Koon (Energy Manager)', role: 'SUB_FINANCE_MANAGER' as Role, organisationId: 'org-energy' },
     { username: 'officer_energy', password: 'password', id: 'user-13', name: 'Aayla Secura (Energy Officer)', role: 'SUB_FINANCE_OFFICER' as Role, organisationId: 'org-energy' },
