@@ -4,14 +4,20 @@ import { formatDate, formatCurrency } from './dateHelpers';
 import dayjs from 'dayjs';
 
 export const exportToExcel = (investments: any[], fileName = 'treasury_report') => {
-    const data = investments.map(inv => ({
-        Bank: inv.bank.name,
-        Principal: formatCurrency(inv.principal),
-        'Daily Rate': `${(inv.dailyRate * 100).toFixed(3)}%`,
-        'Start Date': formatDate(inv.startDate),
-        'Maturity Date': formatDate(inv.maturityDate),
-        Status: inv.status
-    }));
+    const data = investments.map(inv => {
+        const providerName = inv.bank?.name || inv.issuer?.name || inv.counterparty?.name || 'Unknown';
+        const principalValue = inv.principal || inv.faceValue;
+        const rateValue = inv.dailyRate || inv.couponRate || 0;
+
+        return {
+            Provider: providerName,
+            Principal: formatCurrency(principalValue, inv.currency),
+            Rate: typeof rateValue === 'number' ? `${(rateValue * 100).toFixed(3)}%` : `${rateValue}%`,
+            'Start Date': formatDate(inv.startDate || inv.settlementDate || inv.tradeDate),
+            'Maturity Date': formatDate(inv.maturityDate),
+            Status: inv.status
+        };
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
@@ -22,14 +28,17 @@ export const exportToExcel = (investments: any[], fileName = 'treasury_report') 
 };
 
 export const exportToCSV = (investments: any[], fileName = 'treasury_report') => {
-    const data = investments.map(inv => ({
-        Bank: inv.bank.name,
-        Principal: inv.principal, // Keep raw numbers for CSV
-        DailyRate: inv.dailyRate,
-        StartDate: dayjs(inv.startDate).format('YYYY-MM-DD'),
-        MaturityDate: dayjs(inv.maturityDate).format('YYYY-MM-DD'),
-        Status: inv.status
-    }));
+    const data = investments.map(inv => {
+        const providerName = inv.bank?.name || inv.issuer?.name || inv.counterparty?.name || 'Unknown';
+        return {
+            Bank: providerName,
+            Principal: inv.principal || inv.faceValue, // Keep raw numbers for CSV
+            DailyRate: inv.dailyRate || inv.couponRate || 0,
+            StartDate: dayjs(inv.startDate || inv.settlementDate || inv.tradeDate).format('YYYY-MM-DD'),
+            MaturityDate: dayjs(inv.maturityDate).format('YYYY-MM-DD'),
+            Status: inv.status
+        };
+    });
 
     const csv = Papa.unparse(data);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });

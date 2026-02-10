@@ -10,13 +10,17 @@ import TreasuryBillsTable from '../../components/Investments/TreasuryBillsTable.
 import TreasuryBillForm from '../../components/Investments/TreasuryBillForm.vue'
 import CommercialPaperTable from '../../components/Investments/CommercialPaperTable.vue'
 import CommercialPaperForm from '../../components/Investments/CommercialPaperForm.vue'
+import BondsTable from '../../components/Investments/BondsTable.vue'
+import BondForm from '../../components/Investments/BondForm.vue'
 import { 
     mockService, 
     ORGANISATIONS, 
     TreasuryBillStatus, 
     CommercialPaperStatus,
+    type Bond
 } from '../../services/mockData'
 import type { TreasuryBill, CommercialPaper } from '../../services/mockData'
+
 import { formatCurrency } from '../../utils/dateHelpers'
 import { calculatePortfolioROI } from '../../utils/roi'
 import { organisationService } from '../../services/organisationService'
@@ -31,12 +35,15 @@ const loading = ref(true)
 const investments = ref<any[]>([])
 const treasuryBills = ref<TreasuryBill[]>([])
 const commercialPapers = ref<CommercialPaper[]>([])
+const bonds = ref<Bond[]>([])
+
 const banks = ref<any[]>([])
 const bankBalances = ref<any[]>([])
 const targetDate = ref(new Date())
 
 // Navigation
-const activeTab = ref<'deposits' | 'tbills' | 'cp'>('deposits')
+const activeTab = ref<'deposits' | 'tbills' | 'cp' | 'bonds'>('deposits')
+
 
 // Filters
 const selectedBankId = ref('')
@@ -72,8 +79,9 @@ const newInvestment = ref({
     dailyRate: '',
     startDate: dayjs().format('YYYY-MM-DD'),
     maturityDate: dayjs().add(1, 'year').format('YYYY-MM-DD'),
-    type: 'BANK_DEPOSIT' as 'BANK_DEPOSIT' | 'TREASURY_BILL' | 'COMMERCIAL_PAPER'
+    type: 'BANK_DEPOSIT' as 'BANK_DEPOSIT' | 'TREASURY_BILL' | 'COMMERCIAL_PAPER' | 'BOND'
 })
+
 
 const newTreasuryBill = ref<Partial<TreasuryBill>>({
     currency: 'NGN',
@@ -82,8 +90,16 @@ const newTreasuryBill = ref<Partial<TreasuryBill>>({
 
 const newCommercialPaper = ref<Partial<CommercialPaper>>({
     currency: 'NGN',
-    status: CommercialPaperStatus.PENDING_APPROVAL
+    status: CommercialPaperStatus.PENDING_APPROVAL,
+    organisationId: activeOrganisation.value?.id || ''
 })
+
+const newBond = ref<Partial<Bond>>({
+    currency: 'NGN' as any,
+    status: 'PENDING_APPROVAL' as any,
+    organisationId: activeOrganisation.value?.id || ''
+})
+
 
 // --- Logic ---
 
@@ -134,9 +150,13 @@ watch(showModal, async (val: boolean) => {
         } else if (activeTab.value === 'cp') {
             newInvestment.value.type = 'COMMERCIAL_PAPER'
             newCommercialPaper.value.organisationId = newInvestment.value.organisationId
+        } else if (activeTab.value === 'bonds') {
+            newInvestment.value.type = 'BOND' as any
+            newBond.value.organisationId = newInvestment.value.organisationId
         } else {
             newInvestment.value.type = 'BANK_DEPOSIT'
         }
+
     }
 })
 
@@ -184,20 +204,24 @@ onMounted(async () => {
 
 const fetchData = async () => {
     try {
-        const [invData, bankData, currData, taxData, tbillData, cpData] = await Promise.all([
+        const [invData, bankData, currData, taxData, tbillData, cpData, bondData] = await Promise.all([
             mockService.getInvestments(),
             mockService.getBanks(),
             mockService.getCurrencies(),
             mockService.getTaxSettings(),
             mockService.getTreasuryBills(),
-            mockService.getCommercialPapers()
+            mockService.getCommercialPapers(),
+            mockService.getBonds()
         ])
         investments.value = invData
+
         banks.value = bankData
         currencies.value = currData
         taxSettings.value = taxData
         treasuryBills.value = tbillData
         commercialPapers.value = cpData
+        bonds.value = bondData
+
     } finally {
         loading.value = false
     }
@@ -213,6 +237,8 @@ const scopedInvestments = computed(() => {
     let targetData = investments.value
     if (activeTab.value === 'tbills') targetData = treasuryBills.value
     if (activeTab.value === 'cp') targetData = commercialPapers.value
+    if (activeTab.value === 'bonds') targetData = bonds.value
+
 
     if (!isGroupScope.value) {
         return targetData.filter(inv => inv.organisationId === user.organisationId)
@@ -250,100 +276,73 @@ const filteredInvestments = computed(() => {
     })
 })
 
-const totalPrincipal = computed(() => {
-    return currentTypeInvestments.value.reduce((sum, inv) => {
+const normalizedInvestments = computed(() => {
+    return currentTypeInvestments.value.map(inv => {
         if (activeTab.value === 'tbills') {
             const tbill = inv as TreasuryBill
-            return sum + (Number(tbill.purchasePrice) || 0)
+            const principal = Number(tbill.purchasePrice) || 0
+            const faceValue = Number(tbill.faceValue) || 0
+            const interest = faceValue - principal
+            const tenor = tbill.tenorDays || 91
+            const dailyRate = principal ? (interest / principal) / tenor : 0
+            return {
+                ...tbill,
+                principal,
+                dailyRate,
+                startDate: tbill.tradeDate,
+                maturityDate: tbill.maturityDate,
+                status: tbill.status === 'ACTIVE' ? 'ACTIVE' : 'MATURED',
+                currency: tbill.currency
+            }
         }
         if (activeTab.value === 'cp') {
             const cp = inv as CommercialPaper
-            return sum + (Number(cp.purchasePrice) || 0)
+            const principal = Number(cp.purchasePrice) || 0
+            const yieldRate = Number(cp.yieldRate) || 0
+            const dailyRate = yieldRate ? (yieldRate / 365 / 100) : 0
+            return {
+                ...cp,
+                principal,
+                dailyRate,
+                startDate: cp.tradeDate,
+                maturityDate: cp.maturityDate,
+                status: cp.status === 'ACTIVE' ? 'ACTIVE' : 'MATURED',
+                currency: cp.currency
+            }
         }
-        return sum + (Number(inv.principal) || 0)
-    }, 0)
+        if (activeTab.value === 'bonds') {
+            const bond = inv as Bond
+            const principal = Number(bond.purchasePrice) || 0
+            const couponRate = Number(bond.couponRate) || 0
+            const dailyRate = couponRate ? (couponRate / 365 / 100) : 0
+            return {
+                ...bond,
+                principal,
+                dailyRate,
+                startDate: bond.settlementDate,
+                maturityDate: bond.maturityDate,
+                status: bond.status === 'ACTIVE' ? 'ACTIVE' : 'MATURED',
+                currency: bond.currency
+            }
+        }
+        return {
+            ...inv,
+            principal: Number(inv.principal) || 0,
+            dailyRate: Number(inv.dailyRate) || 0
+        }
+    })
+})
+
+const totalPrincipal = computed(() => {
+    return normalizedInvestments.value.reduce((sum, inv) => sum + inv.principal, 0)
 })
 
 const totalAccruedROI = computed(() => {
-    const investmentsToCalc = currentTypeInvestments.value.map(inv => {
-        if (activeTab.value === 'tbills') {
-            const tbill = inv as TreasuryBill
-            const principal = Number(tbill.purchasePrice)
-            const faceValue = Number(tbill.faceValue)
-            const interest = faceValue - principal
-            const tenor = tbill.tenorDays || 91
-            const dailyRate = principal ? (interest / principal) / tenor : 0
-
-            return {
-                ...tbill,
-                principal,
-                dailyRate,
-                startDate: tbill.tradeDate,
-                maturityDate: tbill.maturityDate,
-                status: tbill.status === 'ACTIVE' ? 'ACTIVE' : 'MATURED',
-                currency: tbill.currency
-            }
-        }
-        if (activeTab.value === 'cp') {
-            const cp = inv as CommercialPaper
-            const principal = Number(cp.purchasePrice)
-            const yieldRate = Number(cp.yieldRate)
-            const dailyRate = yieldRate ? (yieldRate / 365 / 100) : 0
-            
-            return {
-                ...cp,
-                principal,
-                dailyRate,
-                startDate: cp.tradeDate,
-                maturityDate: cp.maturityDate,
-                status: cp.status === 'ACTIVE' ? 'ACTIVE' : 'MATURED',
-                currency: cp.currency
-            }
-        }
-        return inv
-    })
-    return calculatePortfolioROI(investmentsToCalc, targetDate.value, 'NGN', [], 0).toNumber()
+    return calculatePortfolioROI(normalizedInvestments.value, targetDate.value, 'NGN', [], 0).toNumber()
 })
 
 const totalNetROI = computed(() => {
-    const investmentsToCalc = currentTypeInvestments.value.map(inv => {
-        // Reuse mapping logic (could extract to helper)
-        if (activeTab.value === 'tbills') {
-            const tbill = inv as TreasuryBill
-            const principal = Number(tbill.purchasePrice)
-            const faceValue = Number(tbill.faceValue)
-            const interest = faceValue - principal
-            const tenor = tbill.tenorDays || 91
-            const dailyRate = principal ? (interest / principal) / tenor : 0
-
-            return {
-                ...tbill,
-                principal,
-                dailyRate,
-                startDate: tbill.tradeDate,
-                maturityDate: tbill.maturityDate,
-                status: tbill.status === 'ACTIVE' ? 'ACTIVE' : 'MATURED',
-                currency: tbill.currency
-            }
-        }
-        if (activeTab.value === 'cp') {
-            const cp = inv as CommercialPaper
-            const principal = Number(cp.purchasePrice)
-            const yieldRate = Number(cp.yieldRate)
-            const dailyRate = yieldRate ? (yieldRate / 365 / 100) : 0
-            return {
-                ...cp,
-                principal,
-                dailyRate,
-                startDate: cp.tradeDate,
-                maturityDate: cp.maturityDate,
-                status: cp.status === 'ACTIVE' ? 'ACTIVE' : 'MATURED',
-                currency: cp.currency
-            }
-        }
-        return inv
-    })
-    return calculatePortfolioROI(investmentsToCalc, targetDate.value, 'NGN', [], taxSettings.value.whtRate).toNumber()
+    return calculatePortfolioROI(normalizedInvestments.value, targetDate.value, 'NGN', [], taxSettings.value.whtRate).toNumber()
 })
 
 const cashLockInMetrics = computed(() => {
@@ -353,25 +352,18 @@ const cashLockInMetrics = computed(() => {
     const nextWeekStart = today.add(1, 'day').startOf('day')
     const nextWeekEnd = today.add(daysAhead, 'day').endOf('day')
 
-    const lockedPrincipal = currentTypeInvestments.value.reduce((sum, inv) => {
-        let principal = Number(inv.principal) || 0
-        if (activeTab.value === 'tbills') principal = Number((inv as TreasuryBill).purchasePrice) || 0
-        if (activeTab.value === 'cp') principal = Number((inv as CommercialPaper).purchasePrice) || 0
-        
+    const lockedPrincipal = normalizedInvestments.value.reduce((sum, inv) => {
+        const principal = inv.principal
         const isLocked = inv.status === 'ACTIVE' && dayjs(inv.maturityDate).isAfter(today, 'day')
         return sum + (isLocked ? principal : 0)
     }, 0)
 
-    const liquidNextWeek = currentTypeInvestments.value.reduce(
+    const liquidNextWeek = normalizedInvestments.value.reduce(
         (acc: { amount: number; count: number }, inv) => {
             const maturity = dayjs(inv.maturityDate)
             const isLiquidNextWeek = inv.status === 'ACTIVE' && maturity.isAfter(nextWeekStart) && maturity.isBefore(nextWeekEnd)
             if (isLiquidNextWeek) {
-                let principal = Number(inv.principal) || 0
-                if (activeTab.value === 'tbills') principal = Number((inv as TreasuryBill).purchasePrice) || 0
-                if (activeTab.value === 'cp') principal = Number((inv as CommercialPaper).purchasePrice) || 0
-                
-                acc.amount += principal
+                acc.amount += inv.principal
                 acc.count += 1
             }
             return acc
@@ -471,6 +463,25 @@ const handleCreateCP = async (data: any) => {
     }
 }
 
+const handleCreateBond = async (data: any) => {
+    isSubmitting.value = true
+    try {
+        await mockService.createBond(data)
+        await fetchData()
+        showModal.value = false
+        newBond.value = {
+            currency: 'NGN' as any,
+            status: 'PENDING_APPROVAL' as any,
+            organisationId: newInvestment.value.organisationId
+        }
+    } catch (error) {
+        console.error('Failed to create Bond:', error)
+    } finally {
+        isSubmitting.value = false
+    }
+}
+
+
 const handleTerminate = (id: string) => {
     investmentToTerminate.value = id
     showTerminateModal.value = true
@@ -549,6 +560,19 @@ const confirmTerminate = async () => {
                     <DocumentTextIcon class="w-5 h-5" />
                     Comm. Papers
                  </button>
+                 <button 
+                    @click="activeTab = 'bonds'"
+                    :class="[
+                        'w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200',
+                        activeTab === 'bonds' 
+                            ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 shadow-sm' 
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    ]"
+                 >
+                    <DocumentTextIcon class="w-5 h-5" />
+                    Bonds
+                 </button>
+
             </div>
 
             <div class="lg:col-span-10 space-y-6">
@@ -668,6 +692,11 @@ const confirmTerminate = async () => {
                     <CommercialPaperTable :investments="filteredInvestments" />
                 </div>
 
+                <div v-else-if="activeTab === 'bonds'" class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                    <BondsTable :investments="filteredInvestments" />
+                </div>
+
+
                 <div v-else class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                     <!-- Main List -->
                     <div class="lg:col-span-3 space-y-4">
@@ -707,7 +736,8 @@ const confirmTerminate = async () => {
                     <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4 transition-colors">
                         <div class="flex justify-between items-start mb-4">
                             <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
-                                {{ activeTab === 'tbills' ? 'New Treasury Bill' : (activeTab === 'cp' ? 'New Commercial Paper' : 'New Investment') }}
+                                {{ activeTab === 'tbills' ? 'New Treasury Bill' : (activeTab === 'cp' ? 'New Commercial Paper' : (activeTab === 'bonds' ? 'New Bond Investment' : 'New Investment')) }}
+
                             </h3>
                             <button @click="showModal = false" class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors">
                                 <XMarkIcon class="h-6 w-6" />
@@ -731,6 +761,15 @@ const confirmTerminate = async () => {
                                 @cancel="showModal = false"
                              />
                         </div>
+                        <div v-else-if="activeTab === 'bonds'">
+                             <BondForm
+                                v-model="newBond"
+                                :is-submitting="isSubmitting"
+                                @submit="handleCreateBond"
+                                @cancel="showModal = false"
+                             />
+                        </div>
+
                         <form v-else @submit.prevent="handleAddInvestment" class="space-y-4">
                             <div v-if="activeOrganisation?.type === 'GROUP'">
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Subsidiary</label>

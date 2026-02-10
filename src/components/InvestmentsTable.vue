@@ -30,6 +30,13 @@ const getDisplayStatus = (investment: any) => {
   return investment.status
 }
 
+const getProviderName = (inv: any) => {
+  if (inv.bank) return inv.bank.name
+  if (inv.issuer) return inv.issuer.name
+  if (inv.counterparty) return inv.counterparty.name
+  return 'Unknown'
+}
+
 const sortedInvestments = computed(() => {
   return [...props.investments].sort((a, b) => {
     // Sort by status (Active first) then by maturity date
@@ -65,8 +72,16 @@ const getStatusColor = (status: string) => {
   }
 }
 
-const navigateToDetail = (id: string) => {
-  router.push(`/investments/${id}`)
+const navigateToDetail = (id: string, type?: string) => {
+  if (type === 'BOND') {
+    router.push(`/investments/bond/${id}`)
+  } else if (type === 'TREASURY_BILL') {
+    router.push(`/investments/tbills/${id}`)
+  } else if (type === 'COMMERCIAL_PAPER') {
+    router.push(`/investments/cp/${id}`)
+  } else {
+    router.push(`/investments/${id}`)
+  }
 }
 
 const handleTerminate = (event: Event, id: string) => {
@@ -94,16 +109,16 @@ const handleTerminate = (event: Event, id: string) => {
         <tr 
           v-for="inv in sortedInvestments" 
           :key="inv.id"
-          @click="navigateToDetail(inv.id)"
+          @click="navigateToDetail(inv.id, inv.type)"
           class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"
         >
           <td class="px-6 py-4 whitespace-nowrap">
             <div class="flex items-center">
               <div class="h-10 w-10 flex-shrink-0 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold">
-                {{ inv.bank.name.charAt(0) }}
+                {{ getProviderName(inv).charAt(0) }}
               </div>
               <div class="ml-4">
-                <div class="text-sm font-medium text-gray-900 dark:text-white">{{ inv.bank.name }}</div>
+                <div class="text-sm font-medium text-gray-900 dark:text-white">{{ getProviderName(inv) }}</div>
                 <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                   <span>ID: {{ inv.id.slice(0, 8) }}</span>
                   <span class="text-gray-300 dark:text-gray-600">•</span>

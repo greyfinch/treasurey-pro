@@ -286,7 +286,7 @@ export interface Investment {
     startDate: Date;
     maturityDate: Date;
     status: 'ACTIVE' | 'MATURED' | 'TERMINATED';
-    type?: 'BANK_DEPOSIT' | 'TREASURY_BILL' | 'COMMERCIAL_PAPER'; // Added CP type
+    type?: 'BANK_DEPOSIT' | 'TREASURY_BILL' | 'COMMERCIAL_PAPER' | 'BOND'; // Added CP and Bond types
     withdrawals: any[];
     rollovers: any[];
     actualInterest?: string;
@@ -376,6 +376,56 @@ export interface CommercialPaperAccrual {
     accruedAmount: string; // Daily Income
     bookValue: string;     // Current Value
 }
+
+export type CouponFrequency = 'ANNUAL' | 'SEMI_ANNUAL' | 'QUARTERLY';
+export type BondStatus = 'PENDING_APPROVAL' | 'ACTIVE' | 'MATURED' | 'SOLD';
+export type CouponStatus = 'SCHEDULED' | 'PAID';
+
+export interface Bond {
+    id: string;
+    organisationId: string;
+    subsidiaryId: string;
+    referenceCode: string;
+    issuerId: string;
+    issuer: Issuer;
+    currency: CurrencyCode;
+    faceValue: string;
+    couponRate: string;
+    couponFrequency: CouponFrequency;
+    purchasePrice: string;
+    yieldToMaturity: string;
+    tradeDate: Date;
+    settlementDate: Date;
+    maturityDate: Date;
+    counterpartyId: string;
+    counterparty: Bank;
+    status: BondStatus;
+    approvalRequestId?: string;
+}
+
+export interface BondCoupon {
+    id: string;
+    bondId: string;
+    dueDate: Date;
+    amount: string;
+    status: CouponStatus;
+    paidDate?: Date;
+}
+
+export interface BondAccrual {
+    id: string;
+    bondId: string;
+    accrualDate: Date;
+    accruedInterest: string;
+}
+
+export interface BondMarketPrice {
+    id: string;
+    bondId: string;
+    price: string;
+    priceDate: Date;
+}
+
 
 export let MOCK_ISSUERS: Issuer[] = [
     { id: 'issuer-mtn', name: 'MTN Nigeria', type: 'CORPORATE', creditRating: 'AAA', country: 'Nigeria', sector: 'Telecommunications' },
@@ -741,6 +791,51 @@ const generateTreasuryBills = (): TreasuryBill[] => {
 };
 
 MOCK_TREASURY_BILLS.push(...generateTreasuryBills());
+
+export const MOCK_BONDS: Bond[] = [
+    {
+        id: uuidv4(),
+        organisationId: 'org-holdco',
+        subsidiaryId: 'sub-acme',
+        referenceCode: 'BND-FGN-2024-001',
+        issuerId: 'issuer-fgn', // Need to add to issuers
+        issuer: { id: 'issuer-fgn', name: 'Federal Government of Nigeria', type: 'CORPORATE', creditRating: 'B', country: 'Nigeria', sector: 'Government' },
+        currency: CurrencyCode.NGN,
+        faceValue: '5000000',
+        couponRate: '13.5',
+        couponFrequency: 'SEMI_ANNUAL',
+        purchasePrice: '4800000',
+        yieldToMaturity: '14.2',
+        tradeDate: dayjs().subtract(180, 'day').toDate(),
+        settlementDate: dayjs().subtract(178, 'day').toDate(),
+        maturityDate: dayjs().subtract(178, 'day').add(5, 'year').toDate(),
+        counterpartyId: BANKS[0]!.id,
+        counterparty: BANKS[0]!,
+        status: 'ACTIVE'
+    }
+];
+
+export const MOCK_BOND_COUPONS: BondCoupon[] = [
+    {
+        id: uuidv4(),
+        bondId: MOCK_BONDS[0]!.id,
+        dueDate: dayjs(MOCK_BONDS[0]!.settlementDate).add(6, 'month').toDate(),
+        amount: (5000000 * 0.135 / 2).toString(),
+        status: 'PAID',
+        paidDate: dayjs(MOCK_BONDS[0]!.settlementDate).add(6, 'month').toDate()
+    },
+    {
+        id: uuidv4(),
+        bondId: MOCK_BONDS[0]!.id,
+        dueDate: dayjs(MOCK_BONDS[0]!.settlementDate).add(12, 'month').toDate(),
+        amount: (5000000 * 0.135 / 2).toString(),
+        status: 'SCHEDULED'
+    }
+];
+
+export const MOCK_BOND_ACCRUALS: BondAccrual[] = [];
+export const MOCK_BOND_MARKET_PRICES: BondMarketPrice[] = [];
+
 
 const MOCK_INVESTMENTS = generateInvestments();
 
@@ -1655,7 +1750,82 @@ export const mockService = {
                 resolve();
             }, 500);
         });
+    },
+
+    // --- Bonds Management ---
+    getBonds: async (): Promise<Bond[]> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve([...MOCK_BONDS]);
+            }, 300);
+        });
+    },
+
+    getBondById: async (id: string): Promise<Bond | undefined> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve(MOCK_BONDS.find(b => b.id === id));
+            }, 200);
+        });
+    },
+
+    createBond: async (data: Omit<Bond, 'id' | 'status' | 'counterparty' | 'issuer'>): Promise<Bond> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const counterparty = BANKS.find(b => b.id === data.counterpartyId);
+                const issuer = MOCK_ISSUERS.find(i => i.id === data.issuerId) || MOCK_BONDS[0]!.issuer; // Fallback for mock
+                if (!counterparty) throw new Error('Invalid counterparty');
+
+                const newBond: Bond = {
+                    ...data,
+                    id: uuidv4(),
+                    status: 'PENDING_APPROVAL',
+                    counterparty,
+                    issuer: issuer as any
+                };
+                MOCK_BONDS.push(newBond);
+
+                // Auto-generate Coupons
+                const frequencyMap = { 'ANNUAL': 1, 'SEMI_ANNUAL': 2, 'QUARTERLY': 4 };
+                const freq = frequencyMap[newBond.couponFrequency];
+                const start = dayjs(newBond.settlementDate);
+                const end = dayjs(newBond.maturityDate);
+                const years = end.diff(start, 'year', true);
+                const totalCoupons = Math.floor(years * freq);
+                const couponAmount = (parseFloat(newBond.faceValue) * (parseFloat(newBond.couponRate) / 100)) / freq;
+
+                for (let i = 1; i <= totalCoupons; i++) {
+                    MOCK_BOND_COUPONS.push({
+                        id: uuidv4(),
+                        bondId: newBond.id,
+                        dueDate: start.add(i * (12 / freq), 'month').toDate(),
+                        amount: couponAmount.toString(),
+                        status: 'SCHEDULED'
+                    });
+                }
+
+                logAction('bond:create', newBond);
+                resolve(newBond);
+            }, 500);
+        });
+    },
+
+    getBondCoupons: async (bondId: string): Promise<BondCoupon[]> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve(MOCK_BOND_COUPONS.filter(c => c.bondId === bondId));
+            }, 300);
+        });
+    },
+
+    getBondAccruals: async (bondId: string): Promise<BondAccrual[]> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve(MOCK_BOND_ACCRUALS.filter(a => a.bondId === bondId));
+            }, 300);
+        });
     }
 };
+
 
 

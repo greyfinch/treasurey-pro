@@ -73,7 +73,8 @@ const scopedInvestments = computed(() => {
 // Computed Properties
 const filteredInvestments = computed(() => {
     return scopedInvestments.value.filter(inv => {
-        const matchBank = !selectedBankId.value || inv.bankId === selectedBankId.value
+        const providerId = inv.bankId || inv.issuerId || inv.counterpartyId
+        const matchBank = !selectedBankId.value || providerId === selectedBankId.value
         const matchStatus = !selectedStatus.value || inv.status === selectedStatus.value
         const matchCurrency = !selectedCurrency.value || inv.currency === selectedCurrency.value
         
@@ -141,7 +142,7 @@ const bankExposureData = computed(() => {
     if (!banks.value.length || !filteredInvestments.value.length) return []
     
     const exposure = banks.value.map(bank => {
-        const bankInvs = filteredInvestments.value.filter(inv => inv.bankId === bank.id)
+        const bankInvs = filteredInvestments.value.filter(inv => (inv.bankId || inv.counterpartyId) === bank.id)
         
         // Calculate currency breakdown
         const currencyBreakdown: any = {}

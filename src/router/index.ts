@@ -7,6 +7,7 @@ const InvestmentList = () => import('../pages/Investments/List.vue')
 const InvestmentDetail = () => import('../pages/Investments/Detail.vue')
 const TreasuryBillDetail = () => import('../pages/Investments/TreasuryBillDetail.vue')
 const CommercialPaperDetail = () => import('../pages/Investments/CommercialPaperDetail.vue')
+const BondDetail = () => import('../pages/Investments/BondDetail.vue')
 const SubsidiaryDetail = () => import('../pages/Subsidiaries/Detail.vue')
 const Settings = () => import('../pages/Settings/Settings.vue')
 const AuditLogs = () => import('../pages/AuditLogs.vue')
@@ -69,6 +70,13 @@ const routes: RouteRecordRaw[] = [
         component: CommercialPaperDetail,
         meta: { requiresAuth: true }
     },
+    {
+        path: '/investments/bond/:id',
+        name: 'BondDetail',
+        component: BondDetail,
+        meta: { requiresAuth: true }
+    },
+
     {
         path: '/investments/:id',
         name: 'InvestmentDetail',
