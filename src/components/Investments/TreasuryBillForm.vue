@@ -166,10 +166,14 @@ const handleSubmit = () => {
 
         <!-- Metrics Preview -->
         <div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-            <div class="grid grid-cols-3 gap-4 text-center">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                 <div>
-                    <span class="block text-xs text-gray-500 dark:text-gray-400 uppercase">ROI ({{ derivedMetrics.tenor }} Days)</span>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400 uppercase">Holding ROI</span>
                     <span class="block text-lg font-bold text-green-600 dark:text-green-400">{{ derivedMetrics.roi }}%</span>
+                </div>
+                <div>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400 uppercase">Annualised Yield</span>
+                    <span class="block text-lg font-bold text-blue-600 dark:text-blue-400">{{ derivedMetrics.yieldRate }}%</span>
                 </div>
                 <div>
                     <span class="block text-xs text-gray-500 dark:text-gray-400 uppercase">Tenor</span>

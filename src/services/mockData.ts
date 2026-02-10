@@ -286,7 +286,7 @@ export interface Investment {
     startDate: Date;
     maturityDate: Date;
     status: 'ACTIVE' | 'MATURED' | 'TERMINATED';
-    type?: 'BANK_DEPOSIT' | 'TREASURY_BILL'; // Added type
+    type?: 'BANK_DEPOSIT' | 'TREASURY_BILL' | 'COMMERCIAL_PAPER'; // Added CP type
     withdrawals: any[];
     rollovers: any[];
     actualInterest?: string;
@@ -320,6 +320,109 @@ export interface TreasuryBillAccrual {
     accruedAmount: string;
     bookValue: string;
 }
+
+export type IssuerType = 'CORPORATE' | 'FINANCIAL_INSTITUTION';
+
+export interface Issuer {
+    id: string;
+    name: string;
+    type: IssuerType;
+    creditRating: string;
+    country: string;
+    sector: string;
+}
+
+export const CommercialPaperStatus = {
+    PENDING_APPROVAL: 'PENDING_APPROVAL',
+    ACTIVE: 'ACTIVE',
+    MATURED: 'MATURED',
+    Rolled_OVER: 'ROLLED_OVER',
+    LIQUIDATED_EARLY: 'LIQUIDATED_EARLY',
+    DEFAULTED: 'DEFAULTED'
+} as const;
+export type CommercialPaperStatus = typeof CommercialPaperStatus[keyof typeof CommercialPaperStatus];
+
+export interface CommercialPaper {
+    id: string;
+    organisationId: string;
+    subsidiaryId: string;
+    referenceCode: string;
+    issuerId: string;
+    issuer: Issuer;
+    currency: CurrencyCode;
+    faceValue: string;
+    purchasePrice: string;
+    yieldRate: string; // The user specified yieldRate and effectiveYield in prompt
+    tenorDays: number;
+    tradeDate: Date;
+    settlementDate: Date;
+    maturityDate: Date;
+    earlyExitAllowed: boolean;
+    earlyExitPenalty?: string;
+    counterpartyId: string;
+    counterparty: Bank;
+    status: CommercialPaperStatus;
+}
+
+export interface CommercialPaperAccrual {
+    id: string;
+    commercialPaperId: string;
+    accrualDate: Date;
+    accruedAmount: string; // Daily Income
+    bookValue: string;     // Current Value
+}
+
+export const MOCK_ISSUERS: Issuer[] = [
+    { id: 'issuer-mtn', name: 'MTN Nigeria', type: 'CORPORATE', creditRating: 'AAA', country: 'Nigeria', sector: 'Telecommunications' },
+    { id: 'issuer-dangote', name: 'Dangote Cement', type: 'CORPORATE', creditRating: 'AA+', country: 'Nigeria', sector: 'Industrial Goods' },
+    { id: 'issuer-flourmills', name: 'Flour Mills of Nigeria', type: 'CORPORATE', creditRating: 'A-', country: 'Nigeria', sector: 'Consumer Goods' },
+    { id: 'issuer-ubagroup', name: 'UBA Group', type: 'FINANCIAL_INSTITUTION', creditRating: 'AA', country: 'Nigeria', sector: 'Banking' },
+    { id: 'issuer-nestle', name: 'Nestle Nigeria', type: 'CORPORATE', creditRating: 'AAA', country: 'Nigeria', sector: 'Consumer Goods' }
+];
+
+export const MOCK_COMMERCIAL_PAPERS: CommercialPaper[] = [
+    {
+        id: uuidv4(),
+        organisationId: 'org-holdco',
+        subsidiaryId: 'sub-acme',
+        referenceCode: 'CP-MTN-001',
+        issuerId: 'issuer-mtn',
+        issuer: MOCK_ISSUERS[0]!,
+        currency: CurrencyCode.NGN,
+        faceValue: '50000000',
+        purchasePrice: '45000000',
+        yieldRate: '12.5',
+        tenorDays: 270,
+        tradeDate: dayjs().subtract(90, 'day').toDate(),
+        settlementDate: dayjs().subtract(88, 'day').toDate(),
+        maturityDate: dayjs().subtract(88, 'day').add(270, 'day').toDate(),
+        earlyExitAllowed: true,
+        earlyExitPenalty: '1.5',
+        counterpartyId: BANKS[1]!.id, // UBA
+        counterparty: BANKS[1]!,
+        status: CommercialPaperStatus.ACTIVE
+    },
+    {
+        id: uuidv4(),
+        organisationId: 'org-foods',
+        subsidiaryId: 'sub-acme-foods',
+        referenceCode: 'CP-DAN-002',
+        issuerId: 'issuer-dangote',
+        issuer: MOCK_ISSUERS[1]!,
+        currency: CurrencyCode.NGN,
+        faceValue: '150000000',
+        purchasePrice: '138000000',
+        yieldRate: '13.2',
+        tenorDays: 180,
+        tradeDate: dayjs().subtract(30, 'day').toDate(),
+        settlementDate: dayjs().subtract(28, 'day').toDate(),
+        maturityDate: dayjs().subtract(28, 'day').add(180, 'day').toDate(),
+        earlyExitAllowed: false,
+        counterpartyId: BANKS[0]!.id, // Zenith
+        counterparty: BANKS[0]!,
+        status: CommercialPaperStatus.ACTIVE
+    }
+];
 
 export interface TreasuryBillEvent {
     id: string;
@@ -1447,6 +1550,58 @@ export const mockService = {
                 tbill.status = TreasuryBillStatus.LIQUIDATED_EARLY;
                 logAction('tbill:liquidate', { id });
                 resolve();
+            }, 500);
+        });
+    },
+
+    // --- Commercial Papers Management ---
+    getIssuers: async (): Promise<Issuer[]> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve([...MOCK_ISSUERS]);
+            }, 300);
+        });
+    },
+
+    getCommercialPapers: async (): Promise<CommercialPaper[]> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve([...MOCK_COMMERCIAL_PAPERS]);
+            }, 300);
+        });
+    },
+
+    getCommercialPaperById: async (id: string): Promise<CommercialPaper | undefined> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve(MOCK_COMMERCIAL_PAPERS.find(cp => cp.id === id));
+            }, 200);
+        });
+    },
+
+    createCommercialPaper: async (data: Omit<CommercialPaper, 'id' | 'status' | 'counterparty' | 'issuer'>): Promise<CommercialPaper> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const counterparty = BANKS.find(b => b.id === data.counterpartyId);
+                const issuer = MOCK_ISSUERS.find(i => i.id === data.issuerId);
+                if (!counterparty) throw new Error('Invalid counterparty');
+                if (!issuer) throw new Error('Invalid issuer');
+
+                const newCP: CommercialPaper = {
+                    ...data,
+                    id: uuidv4(),
+                    status: CommercialPaperStatus.PENDING_APPROVAL,
+                    counterparty,
+                    issuer
+                };
+                MOCK_COMMERCIAL_PAPERS.push(newCP);
+
+                // Create initial event
+                // This would normally be handled by the backend
+                console.log('Commercial Paper Created:', newCP);
+
+                logAction('cp:create', newCP);
+                resolve(newCP);
             }, 500);
         });
     }

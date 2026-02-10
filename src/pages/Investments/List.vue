@@ -8,12 +8,16 @@ import FilterPanel from '../../components/FilterPanel.vue'
 import BankFormModal from '../../components/BankFormModal.vue'
 import TreasuryBillsTable from '../../components/Investments/TreasuryBillsTable.vue'
 import TreasuryBillForm from '../../components/Investments/TreasuryBillForm.vue'
+import CommercialPaperTable from '../../components/Investments/CommercialPaperTable.vue'
+import CommercialPaperForm from '../../components/Investments/CommercialPaperForm.vue'
 import { 
     mockService, 
     ORGANISATIONS, 
-    TreasuryBillStatus 
+    TreasuryBillStatus, 
+    CommercialPaperStatus,
+    CurrencyCode 
 } from '../../services/mockData'
-import type { TreasuryBill } from '../../services/mockData'
+import type { TreasuryBill, CommercialPaper } from '../../services/mockData'
 import { formatCurrency } from '../../utils/dateHelpers'
 import { calculatePortfolioROI } from '../../utils/roi'
 import { organisationService } from '../../services/organisationService'
@@ -27,12 +31,13 @@ const { user, canDo, isGroupScope } = usePermissions()
 const loading = ref(true)
 const investments = ref<any[]>([])
 const treasuryBills = ref<TreasuryBill[]>([])
+const commercialPapers = ref<CommercialPaper[]>([])
 const banks = ref<any[]>([])
 const bankBalances = ref<any[]>([])
 const targetDate = ref(new Date())
 
 // Navigation
-const activeTab = ref<'deposits' | 'tbills'>('deposits')
+const activeTab = ref<'deposits' | 'tbills' | 'cp'>('deposits')
 
 // Filters
 const selectedBankId = ref('')
@@ -44,6 +49,7 @@ const currencies = ref<any[]>([])
 const liquidDays = ref(7)
 const taxSettings = ref({ whtRate: 0 })
 
+// Watch route query
 watch(() => route.query.maturityStart, (newVal) => {
     maturityDateStart.value = newVal as string || ''
 })
@@ -51,57 +57,14 @@ watch(() => route.query.maturityEnd, (newVal) => {
     maturityDateEnd.value = newVal as string || ''
 })
 
-
-// Modal
+// Modal State
 const showModal = ref(false)
 const showBankModal = ref(false)
 const showTerminateModal = ref(false)
 const isSubmitting = ref(false)
 const investmentToTerminate = ref<string | null>(null)
 
-const handleBankSaved = async (newBank: any) => {
-    // Refresh bank list
-    banks.value = await mockService.getBanks()
-    // Auto-select the new bank
-    newInvestment.value.bankId = newBank.id
-}
-
-// Restricted lists based on subsidiary bank accounts
-const availableBanks = computed(() => {
-    const orgId = newInvestment.value.organisationId
-    
-    // If no org selected, or org is GROUP (and no subsidiary selected), show all banks
-    // In a real app, GROUP might also have restrictions, but for now we focus on subsidiaries
-    if (!orgId) return banks.value
-    
-    const org = ORGANISATIONS.find(o => o.id === orgId)
-    if (!org || org.type === 'GROUP') return banks.value
-    
-    // For subsidiaries, only show banks they have accounts with
-    const accountBankIds = new Set(bankBalances.value.filter(b => b.organisationId === orgId).map(b => b.bankId))
-    return banks.value.filter(b => accountBankIds.has(b.id))
-})
-
-const availableCurrencies = computed(() => {
-    const orgId = newInvestment.value.organisationId
-    const bankId = newInvestment.value.bankId
-    
-    // If unrestricted, show all currencies
-    if (!orgId || !bankId) return currencies.value
-    
-    const org = ORGANISATIONS.find(o => o.id === orgId)
-    if (!org || org.type === 'GROUP') return currencies.value
-    
-    // Filter currencies based on available accounts for this bank
-    const accountCurrencies = new Set(
-        bankBalances.value
-            .filter(b => b.organisationId === orgId && b.bankId === bankId)
-            .map(b => b.currency)
-    )
-    
-    return currencies.value.filter(c => accountCurrencies.has(c.code))
-})
-
+// --- Forms State ---
 const newInvestment = ref({
     organisationId: '',
     bankId: '',
@@ -110,7 +73,7 @@ const newInvestment = ref({
     dailyRate: '',
     startDate: dayjs().format('YYYY-MM-DD'),
     maturityDate: dayjs().add(1, 'year').format('YYYY-MM-DD'),
-    type: 'BANK_DEPOSIT' as 'BANK_DEPOSIT' | 'TREASURY_BILL' // Default
+    type: 'BANK_DEPOSIT' as 'BANK_DEPOSIT' | 'TREASURY_BILL' | 'COMMERCIAL_PAPER'
 })
 
 const newTreasuryBill = ref<Partial<TreasuryBill>>({
@@ -118,16 +81,46 @@ const newTreasuryBill = ref<Partial<TreasuryBill>>({
     status: TreasuryBillStatus.PENDING_APPROVAL
 })
 
+const newCommercialPaper = ref<Partial<CommercialPaper>>({
+    currency: 'NGN',
+    status: CommercialPaperStatus.PENDING_APPROVAL
+})
 
-// Initialize organisationId when modal opens
+// --- Logic ---
+
+const handleBankSaved = async (newBank: any) => {
+    banks.value = await mockService.getBanks()
+    newInvestment.value.bankId = newBank.id
+}
+
+const availableBanks = computed(() => {
+    const orgId = newInvestment.value.organisationId
+    if (!orgId) return banks.value
+    const org = ORGANISATIONS.find(o => o.id === orgId)
+    if (!org || org.type === 'GROUP') return banks.value
+    const accountBankIds = new Set(bankBalances.value.filter(b => b.organisationId === orgId).map(b => b.bankId))
+    return banks.value.filter(b => accountBankIds.has(b.id))
+})
+
+const availableCurrencies = computed(() => {
+    const orgId = newInvestment.value.organisationId
+    const bankId = newInvestment.value.bankId
+    if (!orgId || !bankId) return currencies.value
+    const org = ORGANISATIONS.find(o => o.id === orgId)
+    if (!org || org.type === 'GROUP') return currencies.value
+    const accountCurrencies = new Set(
+        bankBalances.value
+            .filter(b => b.organisationId === orgId && b.bankId === bankId)
+            .map(b => b.currency)
+    )
+    return currencies.value.filter(c => accountCurrencies.has(c.code))
+})
+
 watch(showModal, async (val: boolean) => {
     if (val) {
-        // Reset form if opening
         if (!newInvestment.value.organisationId && activeOrganisation.value && activeOrganisation.value.type === 'SUBSIDIARY') {
             newInvestment.value.organisationId = activeOrganisation.value.id
         }
-        
-        // Fetch bank balances if not already loaded or stale
         if (activeOrganisation.value) {
            const orgId = activeOrganisation.value.type === 'GROUP' ? null : activeOrganisation.value.id
            if (orgId) {
@@ -136,31 +129,36 @@ watch(showModal, async (val: boolean) => {
         }
         
         // Set type based on active tab
-        newInvestment.value.type = (activeTab.value === 'tbills' ? 'TREASURY_BILL' : 'BANK_DEPOSIT') as 'BANK_DEPOSIT' | 'TREASURY_BILL'
-    }
-})
-
-// Watch for organisation selection change in form to fetch specific balances
-watch(() => newInvestment.value.organisationId, async (newOrgId) => {
-    if (!newOrgId) return
-    
-    const org = ORGANISATIONS.find(o => o.id === newOrgId)
-    if (org && org.type === 'SUBSIDIARY') {
-        bankBalances.value = await mockService.getBankBalancesByOrganisationId(newOrgId)
-        
-        // Clear bank/currency if they are no longer valid
-        if (newInvestment.value.bankId) {
-             const hasAccount = bankBalances.value.some(b => b.organisationId === newOrgId && b.bankId === newInvestment.value.bankId)
-             if (!hasAccount) newInvestment.value.bankId = ''
+        if (activeTab.value === 'tbills') {
+            newInvestment.value.type = 'TREASURY_BILL'
+            newTreasuryBill.value.organisationId = newInvestment.value.organisationId
+        } else if (activeTab.value === 'cp') {
+            newInvestment.value.type = 'COMMERCIAL_PAPER'
+            newCommercialPaper.value.organisationId = newInvestment.value.organisationId
+        } else {
+            newInvestment.value.type = 'BANK_DEPOSIT'
         }
     }
 })
 
-// Watch for bank selection to validate currency
+watch(() => newInvestment.value.organisationId, async (newOrgId) => {
+    if (!newOrgId) return
+    const org = ORGANISATIONS.find(o => o.id === newOrgId)
+    if (org && org.type === 'SUBSIDIARY') {
+        bankBalances.value = await mockService.getBankBalancesByOrganisationId(newOrgId)
+        if (newInvestment.value.bankId) {
+             const hasAccount = bankBalances.value.some(b => b.organisationId === newOrgId && b.bankId === newInvestment.value.bankId)
+             if (!hasAccount) newInvestment.value.bankId = ''
+        }
+        // Update sub-forms orgId too
+        newTreasuryBill.value.organisationId = newOrgId
+        newCommercialPaper.value.organisationId = newOrgId
+    }
+})
+
 watch(() => newInvestment.value.bankId, (newBankId) => {
     if (!newBankId) return
     const orgId = newInvestment.value.organisationId
-    
     if (orgId) {
          const org = ORGANISATIONS.find(o => o.id === orgId)
          if (org && org.type === 'SUBSIDIARY') {
@@ -169,8 +167,6 @@ watch(() => newInvestment.value.bankId, (newBankId) => {
                  b.bankId === newBankId && 
                  b.currency === newInvestment.value.currency
              )
-             
-             // If current currency is not valid for this bank, reset or default
              if (!hasCurrency) {
                  const available = availableCurrencies.value
                  if (available.length > 0) {
@@ -189,20 +185,21 @@ onMounted(async () => {
 
 const fetchData = async () => {
     try {
-        const [invData, bankData, currData, taxData, tbillData] = await Promise.all([
+        const [invData, bankData, currData, taxData, tbillData, cpData] = await Promise.all([
             mockService.getInvestments(),
             mockService.getBanks(),
             mockService.getCurrencies(),
             mockService.getTaxSettings(),
-            mockService.getTreasuryBills()
+            mockService.getTreasuryBills(),
+            mockService.getCommercialPapers()
         ])
         investments.value = invData
         banks.value = bankData
         currencies.value = currData
         taxSettings.value = taxData
         treasuryBills.value = tbillData
+        commercialPapers.value = cpData
     } finally {
-
         loading.value = false
     }
 }
@@ -213,10 +210,10 @@ const getDisplayStatus = (inv: any) => {
     return inv.status
 }
 
-// Scoped Investments based on active organisation
 const scopedInvestments = computed(() => {
-    // SECURITY: If user is NOT group-scoped, they ONLY see their own organisation
-    const targetData = activeTab.value === 'tbills' ? treasuryBills.value : investments.value
+    let targetData = investments.value
+    if (activeTab.value === 'tbills') targetData = treasuryBills.value
+    if (activeTab.value === 'cp') targetData = commercialPapers.value
 
     if (!isGroupScope.value) {
         return targetData.filter(inv => inv.organisationId === user.organisationId)
@@ -230,19 +227,19 @@ const scopedInvestments = computed(() => {
 const currentTypeInvestments = computed(() => {
     return scopedInvestments.value.filter(inv => {
         if (activeTab.value === 'deposits') return !inv.type || inv.type === 'BANK_DEPOSIT'
-        // For tbills tab, scopedInvestments is already the treasuryBills array, so we just return it
-        // But we should ensure we aren't mixing types if treasuryBills array somehow got pollution (unlikely)
-        if (activeTab.value === 'tbills') return true 
         return true
     })
 })
 
 const filteredInvestments = computed(() => {
     return scopedInvestments.value.filter(inv => {
-        // Type filter is implicit by the data source switch in scopedInvestments
+        // Type filter is mostly implicit by tab, but double check for deposits
         if (activeTab.value === 'deposits' && (inv.type && inv.type !== 'BANK_DEPOSIT')) return false
 
-        const matchBank = !selectedBankId.value || (inv.bankId === selectedBankId.value || (inv as any).counterpartyId === selectedBankId.value)
+        const matchBank = !selectedBankId.value || (
+            inv.bankId === selectedBankId.value || 
+            (inv as any).counterpartyId === selectedBankId.value
+        )
         const matchStatus = !selectedStatus.value || getDisplayStatus(inv) === selectedStatus.value
         const matchCurrency = !selectedCurrency.value || inv.currency === selectedCurrency.value
         
@@ -254,45 +251,21 @@ const filteredInvestments = computed(() => {
     })
 })
 
-
 const totalPrincipal = computed(() => {
     return currentTypeInvestments.value.reduce((sum, inv) => {
         if (activeTab.value === 'tbills') {
             const tbill = inv as TreasuryBill
             return sum + (Number(tbill.purchasePrice) || 0)
         }
+        if (activeTab.value === 'cp') {
+            const cp = inv as CommercialPaper
+            return sum + (Number(cp.purchasePrice) || 0)
+        }
         return sum + (Number(inv.principal) || 0)
     }, 0)
 })
 
 const totalAccruedROI = computed(() => {
-    const investmentsToCalc = currentTypeInvestments.value.map(inv => {
-        if (activeTab.value === 'tbills') {
-            const tbill = inv as TreasuryBill
-            const principal = Number(tbill.purchasePrice)
-            const faceValue = Number(tbill.faceValue)
-            const interest = faceValue - principal
-            const tenor = tbill.tenorDays || 91
-            // derived daily rate
-            const dailyRate = principal ? (interest / principal) / tenor : 0
-
-            return {
-                ...tbill,
-                principal,
-                dailyRate,
-                startDate: tbill.tradeDate,
-                maturityDate: tbill.maturityDate,
-                status: tbill.status === 'ACTIVE' ? 'ACTIVE' : 'MATURED', // align status
-                currency: tbill.currency
-            }
-        }
-        return inv
-    })
-    return calculatePortfolioROI(investmentsToCalc, targetDate.value, 'NGN', [], 0).toNumber()
-})
-
-const totalNetROI = computed(() => {
-    // Re-use logic for consistency, just add tax
     const investmentsToCalc = currentTypeInvestments.value.map(inv => {
         if (activeTab.value === 'tbills') {
             const tbill = inv as TreasuryBill
@@ -312,22 +285,82 @@ const totalNetROI = computed(() => {
                 currency: tbill.currency
             }
         }
+        if (activeTab.value === 'cp') {
+            const cp = inv as CommercialPaper
+            const principal = Number(cp.purchasePrice)
+            const yieldRate = Number(cp.yieldRate)
+            const dailyRate = yieldRate ? (yieldRate / 365 / 100) : 0
+            
+            return {
+                ...cp,
+                principal,
+                dailyRate,
+                startDate: cp.tradeDate,
+                maturityDate: cp.maturityDate,
+                status: cp.status === 'ACTIVE' ? 'ACTIVE' : 'MATURED',
+                currency: cp.currency
+            }
+        }
+        return inv
+    })
+    return calculatePortfolioROI(investmentsToCalc, targetDate.value, 'NGN', [], 0).toNumber()
+})
+
+const totalNetROI = computed(() => {
+    const investmentsToCalc = currentTypeInvestments.value.map(inv => {
+        // Reuse mapping logic (could extract to helper)
+        if (activeTab.value === 'tbills') {
+            const tbill = inv as TreasuryBill
+            const principal = Number(tbill.purchasePrice)
+            const faceValue = Number(tbill.faceValue)
+            const interest = faceValue - principal
+            const tenor = tbill.tenorDays || 91
+            const dailyRate = principal ? (interest / principal) / tenor : 0
+
+            return {
+                ...tbill,
+                principal,
+                dailyRate,
+                startDate: tbill.tradeDate,
+                maturityDate: tbill.maturityDate,
+                status: tbill.status === 'ACTIVE' ? 'ACTIVE' : 'MATURED',
+                currency: tbill.currency
+            }
+        }
+        if (activeTab.value === 'cp') {
+            const cp = inv as CommercialPaper
+            const principal = Number(cp.purchasePrice)
+            const yieldRate = Number(cp.yieldRate)
+            const dailyRate = yieldRate ? (yieldRate / 365 / 100) : 0
+            return {
+                ...cp,
+                principal,
+                dailyRate,
+                startDate: cp.tradeDate,
+                maturityDate: cp.maturityDate,
+                status: cp.status === 'ACTIVE' ? 'ACTIVE' : 'MATURED',
+                currency: cp.currency
+            }
+        }
         return inv
     })
     return calculatePortfolioROI(investmentsToCalc, targetDate.value, 'NGN', [], taxSettings.value.whtRate).toNumber()
 })
 
-
 const cashLockInMetrics = computed(() => {
-    const totalPrincipalValue = currentTypeInvestments.value.reduce((sum, inv) => sum + (Number(inv.principal) || 0), 0)
+    const totalPrincipalValue = totalPrincipal.value // Use computed total
     const today = dayjs()
     const daysAhead = Math.max(1, Number(liquidDays.value) || 1)
     const nextWeekStart = today.add(1, 'day').startOf('day')
     const nextWeekEnd = today.add(daysAhead, 'day').endOf('day')
 
     const lockedPrincipal = currentTypeInvestments.value.reduce((sum, inv) => {
+        let principal = Number(inv.principal) || 0
+        if (activeTab.value === 'tbills') principal = Number((inv as TreasuryBill).purchasePrice) || 0
+        if (activeTab.value === 'cp') principal = Number((inv as CommercialPaper).purchasePrice) || 0
+        
         const isLocked = inv.status === 'ACTIVE' && dayjs(inv.maturityDate).isAfter(today, 'day')
-        return sum + (isLocked ? Number(inv.principal) || 0 : 0)
+        return sum + (isLocked ? principal : 0)
     }, 0)
 
     const liquidNextWeek = currentTypeInvestments.value.reduce(
@@ -335,7 +368,11 @@ const cashLockInMetrics = computed(() => {
             const maturity = dayjs(inv.maturityDate)
             const isLiquidNextWeek = inv.status === 'ACTIVE' && maturity.isAfter(nextWeekStart) && maturity.isBefore(nextWeekEnd)
             if (isLiquidNextWeek) {
-                acc.amount += Number(inv.principal) || 0
+                let principal = Number(inv.principal) || 0
+                if (activeTab.value === 'tbills') principal = Number((inv as TreasuryBill).purchasePrice) || 0
+                if (activeTab.value === 'cp') principal = Number((inv as CommercialPaper).purchasePrice) || 0
+                
+                acc.amount += principal
                 acc.count += 1
             }
             return acc
@@ -366,13 +403,10 @@ const clearFilters = () => {
     router.replace({ query: { ...route.query, maturityStart: undefined, maturityEnd: undefined, maturityDate: undefined } })
 }
 
+// --- Action Handlers ---
 
 const handleAddInvestment = async () => {
-    // SECURITY: Force organisationId for subsidiary users
-    if (!isGroupScope.value) {
-        newInvestment.value.organisationId = user.organisationId
-    }
-
+    if (!isGroupScope.value) newInvestment.value.organisationId = user.organisationId
     if (!newInvestment.value.organisationId || !newInvestment.value.bankId || !newInvestment.value.principal) return
     
     isSubmitting.value = true
@@ -387,8 +421,6 @@ const handleAddInvestment = async () => {
         await fetchData()
         showModal.value = false
         // Reset form
-        showModal.value = false
-        // Reset form
         newInvestment.value = {
             organisationId: activeOrganisation.value?.type === 'SUBSIDIARY' ? activeOrganisation.value.id : '',
             bankId: '',
@@ -397,11 +429,8 @@ const handleAddInvestment = async () => {
             dailyRate: '',
             startDate: dayjs().format('YYYY-MM-DD'),
             maturityDate: dayjs().add(1, 'year').format('YYYY-MM-DD'),
-            type: (activeTab.value === 'tbills' ? 'TREASURY_BILL' : 'BANK_DEPOSIT') as 'BANK_DEPOSIT' | 'TREASURY_BILL'
+            type: 'BANK_DEPOSIT' 
         }
-
-
-
     } finally {
         isSubmitting.value = false
     }
@@ -413,7 +442,6 @@ const handleCreateTBill = async (data: any) => {
         await mockService.createTreasuryBill(data)
         await fetchData()
         showModal.value = false
-        // Reset form
         newTreasuryBill.value = {
             currency: 'NGN',
             status: TreasuryBillStatus.PENDING_APPROVAL,
@@ -426,6 +454,24 @@ const handleCreateTBill = async (data: any) => {
     }
 }
 
+const handleCreateCP = async (data: any) => {
+    isSubmitting.value = true
+    try {
+        await mockService.createCommercialPaper(data)
+        await fetchData()
+        showModal.value = false
+        newCommercialPaper.value = {
+            currency: 'NGN',
+            status: CommercialPaperStatus.PENDING_APPROVAL,
+            organisationId: newInvestment.value.organisationId
+        }
+    } catch (error) {
+        console.error('Failed to create CP:', error)
+    } finally {
+        isSubmitting.value = false
+    }
+}
+
 const handleTerminate = (id: string) => {
     investmentToTerminate.value = id
     showTerminateModal.value = true
@@ -433,7 +479,6 @@ const handleTerminate = (id: string) => {
 
 const confirmTerminate = async () => {
     if (!investmentToTerminate.value) return
-    
     isSubmitting.value = true
     try {
         await mockService.terminateInvestment(investmentToTerminate.value)
@@ -493,175 +538,197 @@ const confirmTerminate = async () => {
                     <DocumentTextIcon class="w-5 h-5" />
                     Treasury Bills
                  </button>
+                 <button 
+                    @click="activeTab = 'cp'"
+                    :class="[
+                        'w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200',
+                        activeTab === 'cp' 
+                            ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 shadow-sm' 
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    ]"
+                 >
+                    <DocumentTextIcon class="w-5 h-5" />
+                    Comm. Papers
+                 </button>
             </div>
 
             <div class="lg:col-span-10 space-y-6">
                 <!-- Active Filter Banner -->
-            <transition
-                enter-active-class="transition duration-300 ease-out"
-                enter-from-class="opacity-0 -translate-y-4"
-                enter-to-class="opacity-100 translate-y-0"
-                leave-active-class="transition duration-200 ease-in"
-                leave-from-class="opacity-100 translate-y-0"
-                leave-to-class="opacity-0 -translate-y-4"
-            >
-                <div v-if="maturityDateStart || maturityDateEnd" class="bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-800 rounded-xl p-4 flex items-center justify-between shadow-sm transition-colors">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center">
-                            <CalendarIcon class="w-6 h-6 text-primary-600 dark:text-primary-400" />
+                <transition
+                    enter-active-class="transition duration-300 ease-out"
+                    enter-from-class="opacity-0 -translate-y-4"
+                    enter-to-class="opacity-100 translate-y-0"
+                    leave-active-class="transition duration-200 ease-in"
+                    leave-from-class="opacity-100 translate-y-0"
+                    leave-to-class="opacity-0 -translate-y-4"
+                >
+                    <div v-if="maturityDateStart || maturityDateEnd" class="bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-800 rounded-xl p-4 flex items-center justify-between shadow-sm transition-colors">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center">
+                                <CalendarIcon class="w-6 h-6 text-primary-600 dark:text-primary-400" />
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-primary-900 dark:text-primary-100">Filtering by Maturity Date Range</p>
+                                <p class="text-xs text-primary-600 dark:text-primary-400 font-medium">
+                                    <span v-if="maturityDateStart && maturityDateEnd">
+                                        From {{ dayjs(maturityDateStart).format('MMM D, YYYY') }} to {{ dayjs(maturityDateEnd).format('MMM D, YYYY') }}
+                                    </span>
+                                    <span v-else-if="maturityDateStart">
+                                        From {{ dayjs(maturityDateStart).format('MMM D, YYYY') }} onwards
+                                    </span>
+                                    <span v-else-if="maturityDateEnd">
+                                        Until {{ dayjs(maturityDateEnd).format('MMM D, YYYY') }}
+                                    </span>
+                                </p>
+                            </div>
                         </div>
+                        <button 
+                            @click="clearFilters"
+                            class="p-2 hover:bg-primary-100 dark:hover:bg-primary-900/40 rounded-lg transition-colors group"
+                            title="Clear filter"
+                        >
+                            <XMarkIcon class="w-5 h-5 text-primary-400 dark:text-primary-500 group-hover:text-primary-600 dark:group-hover:text-primary-300" />
+                        </button>
+                    </div>
+                </transition>
+
+                <!-- Portfolio Totals (Hidden for restricted roles) -->
+                <div v-if="canDo('roi:view')" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="card bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Principal</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                            {{ formatCurrency(totalPrincipal) }}
+                        </p>
+                        <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Across all investments</p>
+                    </div>
+                    <div class="card bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Accrued ROI (Gross)</p>
+                        <p class="text-2xl font-bold text-gray-700 dark:text-gray-200 mt-2">
+                            {{ formatCurrency(totalAccruedROI) }}
+                        </p>
+                        <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Total earned before tax</p>
+                    </div>
+                    <div class="card bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Net ROI (After Tax)</p>
+                        <p class="text-2xl font-bold text-money-600 dark:text-money-400 mt-2">
+                            {{ formatCurrency(totalNetROI) }}
+                        </p>
+                        <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Realised after {{ taxSettings.whtRate }}% WHT</p>
+                    </div>
+                </div>
+
+                <!-- Cash Lock-in (Hidden for restricted roles) -->
+                <div v-if="canDo('liquidity:view')" class="card bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 overflow-hidden transition-colors">
+                    <div class="flex items-center justify-between mb-4">
                         <div>
-                            <p class="text-sm font-bold text-primary-900 dark:text-primary-100">Filtering by Maturity Date Range</p>
-                            <p class="text-xs text-primary-600 dark:text-primary-400 font-medium">
-                                <span v-if="maturityDateStart && maturityDateEnd">
-                                    From {{ dayjs(maturityDateStart).format('MMM D, YYYY') }} to {{ dayjs(maturityDateEnd).format('MMM D, YYYY') }}
-                                </span>
-                                <span v-else-if="maturityDateStart">
-                                    From {{ dayjs(maturityDateStart).format('MMM D, YYYY') }} onwards
-                                </span>
-                                <span v-else-if="maturityDateEnd">
-                                    Until {{ dayjs(maturityDateEnd).format('MMM D, YYYY') }}
-                                </span>
+                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Cash Lock-in</h2>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Liquidity outlook based on maturity dates</p>
+                        </div>
+                        <span class="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">Today & Next {{ cashLockInMetrics.daysAhead }} Days</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="rounded-lg border border-gray-100 dark:border-gray-700 p-4 bg-gray-50/50 dark:bg-gray-900/50 transition-colors">
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">Locked today</p>
+                            <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                                {{ cashLockInMetrics.lockedPercent.toFixed(1) }}%
+                            </p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                {{ formatCurrency(cashLockInMetrics.lockedPrincipal) }} of {{ formatCurrency(cashLockInMetrics.totalPrincipal) }}
+                            </p>
+                        </div>
+                        <div class="rounded-lg border border-gray-100 dark:border-gray-700 p-4 bg-gray-50/50 dark:bg-gray-900/50 transition-colors">
+                            <div class="flex items-center justify-between gap-3">
+                                <p class="text-[11px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">Becomes liquid in</p>
+                                <div class="flex items-center gap-2">
+                                    <input
+                                        v-model.number="liquidDays"
+                                        type="number"
+                                        min="1"
+                                        class="w-16 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-950 px-2 py-1 text-xs text-gray-900 dark:text-gray-300 transition-colors"
+                                    >
+                                    <span class="text-[11px] text-gray-400 dark:text-gray-500">days</span>
+                                </div>
+                            </div>
+                            <p class="text-2xl font-bold text-green-600 dark:text-green-400">
+                                {{ formatCurrency(cashLockInMetrics.liquidNextWeekAmount) }}
+                            </p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                {{ cashLockInMetrics.liquidPercent.toFixed(1) }}% of portfolio • {{ cashLockInMetrics.liquidNextWeekCount }} investments
                             </p>
                         </div>
                     </div>
-                    <button 
-                        @click="clearFilters"
-                        class="p-2 hover:bg-primary-100 dark:hover:bg-primary-900/40 rounded-lg transition-colors group"
-                        title="Clear filter"
-                    >
-                        <XMarkIcon class="w-5 h-5 text-primary-400 dark:text-primary-500 group-hover:text-primary-600 dark:group-hover:text-primary-300" />
-                    </button>
-                </div>
-            </transition>
-
-            <!-- Portfolio Totals (Hidden for restricted roles) -->
-            <div v-if="canDo('roi:view')" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div class="card bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
-                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Principal</p>
-                    <p class="text-2xl font-bold text-gray-900 dark:text-white mt-2">
-                        {{ formatCurrency(totalPrincipal) }}
-                    </p>
-                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Across all investments</p>
-                </div>
-                <div class="card bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
-                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Accrued ROI (Gross)</p>
-                    <p class="text-2xl font-bold text-gray-700 dark:text-gray-200 mt-2">
-                        {{ formatCurrency(totalAccruedROI) }}
-                    </p>
-                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Total earned before tax</p>
-                </div>
-                <div class="card bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
-                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Net ROI (After Tax)</p>
-                    <p class="text-2xl font-bold text-money-600 dark:text-money-400 mt-2">
-                        {{ formatCurrency(totalNetROI) }}
-                    </p>
-                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Realised after {{ taxSettings.whtRate }}% WHT</p>
-                </div>
-            </div>
-            <!-- Cash Lock-in (Hidden for restricted roles) -->
-            <div v-if="canDo('liquidity:view')" class="card bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 overflow-hidden transition-colors">
-                <div class="flex items-center justify-between mb-4">
-                    <div>
-                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Cash Lock-in</h2>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Liquidity outlook based on maturity dates</p>
-                    </div>
-                    <span class="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">Today & Next {{ cashLockInMetrics.daysAhead }} Days</span>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="rounded-lg border border-gray-100 dark:border-gray-700 p-4 bg-gray-50/50 dark:bg-gray-900/50 transition-colors">
-                        <p class="text-[11px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">Locked today</p>
-                        <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-                            {{ cashLockInMetrics.lockedPercent.toFixed(1) }}%
-                        </p>
-                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            {{ formatCurrency(cashLockInMetrics.lockedPrincipal) }} of {{ formatCurrency(cashLockInMetrics.totalPrincipal) }}
-                        </p>
-                    </div>
-                    <div class="rounded-lg border border-gray-100 dark:border-gray-700 p-4 bg-gray-50/50 dark:bg-gray-900/50 transition-colors">
-                        <div class="flex items-center justify-between gap-3">
-                            <p class="text-[11px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">Becomes liquid in</p>
-                            <div class="flex items-center gap-2">
-                                <input
-                                    v-model.number="liquidDays"
-                                    type="number"
-                                    min="1"
-                                    class="w-16 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-950 px-2 py-1 text-xs text-gray-900 dark:text-gray-300 transition-colors"
-                                >
-                                <span class="text-[11px] text-gray-400 dark:text-gray-500">days</span>
-                            </div>
+                <!-- Tables -->
+                <div v-if="activeTab === 'tbills'" class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                    <TreasuryBillsTable :investments="filteredInvestments" />
+                </div>
+
+                <div v-else-if="activeTab === 'cp'" class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                    <CommercialPaperTable :investments="filteredInvestments" />
+                </div>
+
+                <div v-else class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    <!-- Main List -->
+                    <div class="lg:col-span-3 space-y-4">
+                         <!-- Table -->
+                        <div class="card p-0 overflow-hidden bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
+                            <InvestmentsTable 
+                                :investments="filteredInvestments"
+                                :target-date="targetDate"
+                                :wht-rate="taxSettings.whtRate"
+                                @terminate="handleTerminate"
+                            />
                         </div>
-                        <p class="text-2xl font-bold text-green-600 dark:text-green-400">
-                            {{ formatCurrency(cashLockInMetrics.liquidNextWeekAmount) }}
-                        </p>
-                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            {{ cashLockInMetrics.liquidPercent.toFixed(1) }}% of portfolio • {{ cashLockInMetrics.liquidNextWeekCount }} investments
-                        </p>
                     </div>
-                </div>
-            </div>
-
-            <div v-if="activeTab === 'tbills'" class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-                <TreasuryBillsTable :investments="filteredInvestments" />
-            </div>
-
-            <div v-if="activeTab === 'deposits'" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <!-- Main List -->
-                <div class="lg:col-span-3 space-y-4">
-                     <!-- Table -->
-                    <div class="card p-0 overflow-hidden bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 transition-colors">
-                        <InvestmentsTable 
-                            :investments="filteredInvestments"
-                            :target-date="targetDate"
-                            :wht-rate="taxSettings.whtRate"
-                            @terminate="handleTerminate"
+        
+                    <!-- Filters -->
+                    <div class="lg:col-span-1">
+                        <FilterPanel 
+                            :banks="banks"
+                            :currencies="currencies"
+                            v-model:selected-bank-id="selectedBankId"
+                            v-model:selected-status="selectedStatus"
+                            v-model:selected-currency="selectedCurrency"
+                            v-model:maturity-date-start="maturityDateStart"
+                            v-model:maturity-date-end="maturityDateEnd"
+                            @clear="clearFilters"
                         />
                     </div>
                 </div>
-    
-                <!-- Filters -->
-                <div class="lg:col-span-1">
-                    <FilterPanel 
-                        :banks="banks"
-                        :currencies="currencies"
-                        v-model:selected-bank-id="selectedBankId"
-                        v-model:selected-status="selectedStatus"
-                        v-model:selected-currency="selectedCurrency"
-                        v-model:maturity-date-start="maturityDateStart"
-                        v-model:maturity-date-end="maturityDateEnd"
-                        @clear="clearFilters"
-                    />
-                </div>
-
             </div>
         </div>
 
-        </div>
-    </div>
-
-    <!-- Add Modal -->
+        <!-- Add Modal -->
         <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto bg-gray-500/90 dark:bg-gray-950/90 transition-colors" aria-labelledby="modal-title" role="dialog" aria-modal="true">
             <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-
                 <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
                 <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border dark:border-gray-700">
                     <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4 transition-colors">
                         <div class="flex justify-between items-start mb-4">
                             <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
-                                {{ activeTab === 'tbills' ? 'New Treasury Bill' : 'New Investment' }}
+                                {{ activeTab === 'tbills' ? 'New Treasury Bill' : (activeTab === 'cp' ? 'New Commercial Paper' : 'New Investment') }}
                             </h3>
                             <button @click="showModal = false" class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors">
                                 <XMarkIcon class="h-6 w-6" />
                             </button>
                         </div>
                         
+                        <!-- Conditional Forms -->
                         <div v-if="activeTab === 'tbills'">
                              <TreasuryBillForm
                                 v-model="newTreasuryBill"
                                 :is-submitting="isSubmitting"
                                 @submit="handleCreateTBill"
+                                @cancel="showModal = false"
+                             />
+                        </div>
+                        <div v-else-if="activeTab === 'cp'">
+                             <CommercialPaperForm
+                                v-model="newCommercialPaper"
+                                :is-submitting="isSubmitting"
+                                @submit="handleCreateCP"
                                 @cancel="showModal = false"
                              />
                         </div>
@@ -795,6 +862,7 @@ const confirmTerminate = async () => {
                     </div>
                 </div>
             </div>
+        </div>
 
     </div>
 </template>
