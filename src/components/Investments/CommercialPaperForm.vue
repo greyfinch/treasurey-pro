@@ -1,13 +1,17 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
+
 import dayjs from 'dayjs';
 import { 
+    mockService,
     type CommercialPaper, 
     CurrencyCode, 
     BANKS,
     ORGANISATIONS,
-    MOCK_ISSUERS
+    type Issuer
 } from '../../services/mockData';
+
+
 
 const props = defineProps<{
     modelValue: Partial<CommercialPaper>;
@@ -25,6 +29,18 @@ const authStore = {
 const subStore = {
     subsidiaries: ORGANISATIONS.filter(o => o.type === 'SUBSIDIARY')
 };
+
+const issuers = ref<Issuer[]>([]);
+const loadingIssuers = ref(true);
+
+onMounted(async () => {
+    try {
+        issuers.value = await mockService.getIssuers();
+    } finally {
+        loadingIssuers.value = false;
+    }
+});
+
 
 const interestType = ref<'Discounted' | 'Interest Bearing'>('Discounted');
 
@@ -47,8 +63,9 @@ const form = ref({
 
 // Computed Issuer details
 const selectedIssuer = computed(() => {
-    return MOCK_ISSUERS.find(i => i.id === form.value.issuerId);
+    return issuers.value.find(i => i.id === form.value.issuerId);
 });
+
 
 // Helper to safely format date to string
 const formatDateVal = (val: string | Date | undefined): string => {
@@ -168,11 +185,13 @@ const handleSubmit = () => {
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Issuer</label>
                 <select 
                     v-model="form.issuerId"
-                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors"
+                    :disabled="loadingIssuers"
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors disabled:opacity-50"
                 >
-                    <option value="" disabled>Select Issuer</option>
-                    <option v-for="issuer in MOCK_ISSUERS" :key="issuer.id" :value="issuer.id">{{ issuer.name }} ({{ issuer.creditRating }})</option>
+                    <option value="" disabled>{{ loadingIssuers ? 'Loading Issuers...' : 'Select Issuer' }}</option>
+                    <option v-for="issuer in issuers" :key="issuer.id" :value="issuer.id">{{ issuer.name }} ({{ issuer.creditRating }})</option>
                 </select>
+
                 <div v-if="selectedIssuer" class="mt-1 text-xs text-gray-500 dark:text-gray-400 flex gap-2">
                     <span class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">{{ selectedIssuer.sector }}</span>
                     <span class="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded font-medium">{{ selectedIssuer.creditRating }}</span>

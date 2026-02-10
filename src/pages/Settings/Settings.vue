@@ -18,6 +18,7 @@ import OrganisationSettings from './sections/OrganisationSettings.vue'
 import BankSettings from './sections/BankSettings.vue'
 import NotificationSettings from './sections/NotificationSettings.vue'
 import TaxSettings from './sections/TaxSettings.vue'
+import IssuerSettings from './sections/IssuerSettings.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -27,6 +28,7 @@ const tabs = [
     { id: 'fx-rates', name: 'FX Rates', icon: ArrowPathRoundedSquareIcon, component: FXRateSettings },
     { id: 'organisations', name: 'Organisations', icon: BuildingOfficeIcon, component: OrganisationSettings },
     { id: 'banks', name: 'Partner Banks', icon: BuildingLibraryIcon, component: BankSettings },
+    { id: 'cp-issuers', name: 'CP Issuers', icon: BuildingOfficeIcon, component: IssuerSettings },
     { id: 'notifications', name: 'Notifications', icon: BellAlertIcon, component: NotificationSettings },
     { id: 'tax', name: 'Tax Settings', icon: ReceiptPercentIcon, component: TaxSettings },
     { id: 'security', name: 'Security', icon: ShieldCheckIcon, component: SecuritySettings },

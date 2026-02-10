@@ -377,7 +377,7 @@ export interface CommercialPaperAccrual {
     bookValue: string;     // Current Value
 }
 
-export const MOCK_ISSUERS: Issuer[] = [
+export let MOCK_ISSUERS: Issuer[] = [
     { id: 'issuer-mtn', name: 'MTN Nigeria', type: 'CORPORATE', creditRating: 'AAA', country: 'Nigeria', sector: 'Telecommunications' },
     { id: 'issuer-dangote', name: 'Dangote Cement', type: 'CORPORATE', creditRating: 'AA+', country: 'Nigeria', sector: 'Industrial Goods' },
     { id: 'issuer-flourmills', name: 'Flour Mills of Nigeria', type: 'CORPORATE', creditRating: 'A-', country: 'Nigeria', sector: 'Consumer Goods' },
@@ -1613,6 +1613,49 @@ export const mockService = {
                 resolve(newCP);
             }, 500);
         });
+    },
+
+    addIssuer: async (data: Omit<Issuer, 'id'>): Promise<Issuer> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const newIssuer: Issuer = {
+                    ...data,
+                    id: uuidv4()
+                };
+                MOCK_ISSUERS.push(newIssuer);
+                logAction('issuer:create', newIssuer);
+                resolve(newIssuer);
+            }, 500);
+        });
+    },
+
+    updateIssuer: async (id: string, data: Partial<Issuer>): Promise<Issuer> => {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                const index = MOCK_ISSUERS.findIndex(i => i.id === id);
+                if (index === -1) return reject(new Error('Issuer not found'));
+
+                const updatedIssuer = { ...MOCK_ISSUERS[index], ...data } as Issuer;
+                MOCK_ISSUERS[index] = updatedIssuer;
+
+                logAction('issuer:update', updatedIssuer);
+                resolve(updatedIssuer);
+            }, 500);
+        });
+    },
+
+    deleteIssuer: async (id: string): Promise<void> => {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                const index = MOCK_ISSUERS.findIndex(i => i.id === id);
+                if (index === -1) return reject(new Error('Issuer not found'));
+
+                MOCK_ISSUERS.splice(index, 1);
+                logAction('issuer:delete', { id });
+                resolve();
+            }, 500);
+        });
     }
 };
+
 
