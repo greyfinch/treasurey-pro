@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { PlusIcon, XMarkIcon, CalendarIcon, BanknotesIcon, DocumentTextIcon } from '@heroicons/vue/24/outline'
 import dayjs from 'dayjs'
 import InvestmentsTable from '../../components/InvestmentsTable.vue'
