@@ -5,7 +5,6 @@ import {
     PlusIcon, 
     ArrowPathIcon, 
     ArrowDownTrayIcon, 
-    ArrowUpTrayIcon,
     ChartBarIcon,
     ListBulletIcon,
     ClockIcon,

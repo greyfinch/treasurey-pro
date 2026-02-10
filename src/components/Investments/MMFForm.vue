@@ -3,9 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { 
     mockService, 
     CurrencyCode, 
-    MOCK_CURRENCIES 
 } from '../../services/mockData';
-import { formatCurrency } from '../../utils/dateHelpers';
 
 const props = defineProps<{
     initialFundId?: string;

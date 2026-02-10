@@ -56,7 +56,7 @@ const tiers = [
         Choose the best plan for your treasury management needs. Scale as you grow.
       </p>
       <div class="isolate mx-auto mt-16 grid max-w-md grid-cols-1 gap-y-8 sm:mt-20 lg:mx-0 lg:max-w-none lg:grid-cols-3">
-        <div v-for="(tier, tierIdx) in tiers" :key="tier.id" :class="[tier.mostPopular ? 'ring-2 ring-primary-600' : 'ring-1 ring-gray-200 dark:ring-gray-700', 'rounded-3xl p-8 xl:p-10 transition-all hover:scale-105']">
+        <div v-for="(tier) in tiers" :key="tier.id" :class="[tier.mostPopular ? 'ring-2 ring-primary-600' : 'ring-1 ring-gray-200 dark:ring-gray-700', 'rounded-3xl p-8 xl:p-10 transition-all hover:scale-105']">
           <div class="flex items-center justify-between gap-x-4">
             <h3 :id="tier.id" :class="[tier.mostPopular ? 'text-primary-600' : 'text-gray-900 dark:text-white', 'text-lg font-semibold leading-8']">{{ tier.name }}</h3>
             <p v-if="tier.mostPopular" class="rounded-full bg-primary-600/10 px-2.5 py-1 text-xs font-semibold leading-5 text-primary-600">Most popular</p>

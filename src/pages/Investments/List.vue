@@ -30,7 +30,6 @@ import { organisationService } from '../../services/organisationService'
 import { usePermissions } from '../../composables/usePermissions'
 
 const route = useRoute()
-const router = useRouter()
 const { activeOrganisation } = organisationService
 const { user, canDo, isGroupScope } = usePermissions()
 
