@@ -155,7 +155,7 @@ const handleSubmit = () => {
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subsidiary</label>
                 <select 
                     v-model="form.organisationId"
-                    class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors"
                 >
                     <option v-for="sub in subStore.subsidiaries" :key="sub.id" :value="sub.id">{{ sub.name }}</option>
                 </select>
@@ -165,7 +165,7 @@ const handleSubmit = () => {
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Issuer</label>
                 <select 
                     v-model="form.issuerId"
-                    class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors"
                 >
                     <option value="" disabled>Select Issuer</option>
                     <option v-for="issuer in MOCK_ISSUERS" :key="issuer.id" :value="issuer.id">{{ issuer.name }} ({{ issuer.creditRating }})</option>
@@ -183,7 +183,7 @@ const handleSubmit = () => {
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Currency</label>
                 <select 
                     v-model="form.currency"
-                    class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors"
                 >
                     <option :value="CurrencyCode.NGN">NGN</option>
                     <option :value="CurrencyCode.USD">USD</option>
@@ -192,7 +192,7 @@ const handleSubmit = () => {
 
             <template v-if="interestType === 'DISCOUNTED'">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Face Value (Maturity)</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Face Value</label>
                     <div class="relative rounded-md shadow-sm">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <span class="text-gray-500 sm:text-sm">{{ form.currency === 'NGN' ? '₦' : '$' }}</span>
@@ -200,14 +200,14 @@ const handleSubmit = () => {
                         <input 
                             type="number" 
                             v-model="form.faceValue"
-                            class="block w-full pl-7 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                            class="block w-full pl-7 0 mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors"
                             placeholder="0.00"
                         />
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Purchase Price (Investment)</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Purchase Price</label>
                     <div class="relative rounded-md shadow-sm">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <span class="text-gray-500 sm:text-sm">{{ form.currency === 'NGN' ? '₦' : '$' }}</span>
@@ -215,7 +215,7 @@ const handleSubmit = () => {
                         <input 
                             type="number" 
                             v-model="form.purchasePrice"
-                            class="block w-full pl-7 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                            class="block w-full pl-7 rmt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors"
                             placeholder="0.00"
                         />
                     </div>
@@ -224,7 +224,7 @@ const handleSubmit = () => {
 
             <template v-else>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Principal (Investment)</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Principal</label>
                     <div class="relative rounded-md shadow-sm">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <span class="text-gray-500 sm:text-sm">{{ form.currency === 'NGN' ? '₦' : '$' }}</span>
@@ -232,7 +232,7 @@ const handleSubmit = () => {
                         <input 
                             type="number" 
                             v-model="form.purchasePrice"
-                            class="block w-full pl-7 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                            class="block w-full pl-7 mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors"
                             placeholder="0.00"
                         />
                     </div>
@@ -244,7 +244,7 @@ const handleSubmit = () => {
                         <input 
                             type="number" 
                             v-model="form.interestRate"
-                            class="block w-full pr-10 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                            class="block w-full pr-10 mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors"
                             placeholder="0.00"
                         />
                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -255,31 +255,6 @@ const handleSubmit = () => {
             </template>
         </div>
 
-        <!-- Metrics Preview -->
-        <div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                <div>
-                    <span class="block text-xs text-gray-500 dark:text-gray-400 uppercase">Holding ROI</span>
-                    <span class="block text-lg font-bold text-green-600 dark:text-green-400">{{ derivedMetrics.roi }}%</span>
-                </div>
-                <div>
-                    <span class="block text-xs text-gray-500 dark:text-gray-400 uppercase">Annualised Yield</span>
-                    <span class="block text-lg font-bold text-blue-600 dark:text-blue-400">{{ derivedMetrics.yieldRate }}%</span>
-                </div>
-                <div>
-                    <span class="block text-xs text-gray-500 dark:text-gray-400 uppercase">Tenor</span>
-                    <span class="block text-lg font-bold text-gray-900 dark:text-white">{{ derivedMetrics.tenor }} Days</span>
-                </div>
-                <div>
-                    <span class="block text-xs text-gray-500 dark:text-gray-400 uppercase">Profit at Maturity</span>
-                    <span class="block text-lg font-bold text-gray-900 dark:text-white">{{ form.currency === 'NGN' ? '₦' : '$' }}{{ Number(derivedMetrics.profit).toLocaleString() }}</span>
-                    <span v-if="interestType === 'INTEREST_BEARING'" class="block text-xs text-gray-500 mt-1">
-                        Mat. Val: {{ form.currency === 'NGN' ? '₦' : '$' }}{{ Number(derivedMetrics.derivedFaceValue).toLocaleString() }}
-                    </span>
-                </div>
-            </div>
-        </div>
-
         <!-- Dates & Dealer -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
@@ -287,7 +262,7 @@ const handleSubmit = () => {
                 <input 
                     type="date" 
                     v-model="form.tradeDate"
-                    class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors"
                 />
             </div>
             <div>
@@ -295,7 +270,7 @@ const handleSubmit = () => {
                 <input 
                     type="date" 
                     v-model="form.settlementDate"
-                    class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors"
                 />
             </div>
             <div>
@@ -303,16 +278,16 @@ const handleSubmit = () => {
                 <input 
                     type="date" 
                     v-model="form.maturityDate"
-                    class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors"
                 />
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Dealer (Counterparty)</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Counterparty</label>
                 <select 
                     v-model="form.counterpartyId"
-                    class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors"
                 >
-                    <option value="" disabled>Select Dealer Bank</option>
+                    <option value="" disabled>Dealer Bank</option>
                     <option v-for="bank in BANKS" :key="bank.id" :value="bank.id">{{ bank.name }}</option>
                 </select>
             </div>
@@ -333,7 +308,7 @@ const handleSubmit = () => {
                     <input 
                         type="number" 
                         v-model="form.earlyExitPenalty"
-                        class="block w-full pr-10 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                        class="block w-full pr-10 mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors"
                         placeholder="0.00"
                     />
                      <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -349,9 +324,34 @@ const handleSubmit = () => {
             <textarea 
                 v-model="form.notes"
                 rows="3"
-                class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border text-gray-900 dark:text-white bg-white dark:bg-gray-900 transition-colors"
                 placeholder="Enter deal ticket number, ISIN, or remarks..."
             ></textarea>
+        </div>
+
+        <!-- Metrics Preview -->
+        <div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div>
+                    <span class="block text-[9px] text-gray-500 dark:text-gray-400 uppercase">Holding ROI</span>
+                    <span class="block text-[9px] font-bold text-green-600 dark:text-green-400">{{ derivedMetrics.roi }}%</span>
+                </div>
+                <div>
+                    <span class="block text-[9px] text-gray-500 dark:text-gray-400 uppercase">Annualised Yield</span>
+                    <span class="block text-[9px] font-bold text-blue-600 dark:text-blue-400">{{ derivedMetrics.yieldRate }}%</span>
+                </div>
+                <div>
+                    <span class="block text-[9px] text-gray-500 dark:text-gray-400 uppercase">Tenor</span>
+                    <span class="block text-[9px] font-bold text-gray-900 dark:text-white">{{ derivedMetrics.tenor }} Days</span>
+                </div>
+                <div>
+                    <span class="block text-[9px] text-gray-500 dark:text-gray-400 uppercase">Profit @ Maturity</span>
+                    <span class="block text-[9px] font-bold text-gray-900 dark:text-white">{{ form.currency === 'NGN' ? '₦' : '$' }}{{ Number(derivedMetrics.profit).toLocaleString() }}</span>
+                    <span v-if="interestType === 'INTEREST_BEARING'" class="block text-[9px] text-gray-500 mt-1">
+                        Mat. Val: {{ form.currency === 'NGN' ? '₦' : '$' }}{{ Number(derivedMetrics.derivedFaceValue).toLocaleString() }}
+                    </span>
+                </div>
+            </div>
         </div>
 
         <!-- Actions -->
