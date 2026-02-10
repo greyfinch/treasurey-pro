@@ -15,7 +15,6 @@ import {
     ORGANISATIONS, 
     TreasuryBillStatus, 
     CommercialPaperStatus,
-    CurrencyCode 
 } from '../../services/mockData'
 import type { TreasuryBill, CommercialPaper } from '../../services/mockData'
 import { formatCurrency } from '../../utils/dateHelpers'

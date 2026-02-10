@@ -3,7 +3,6 @@ import { ref, computed, watch } from 'vue';
 import dayjs from 'dayjs';
 import { 
     type CommercialPaper, 
-    type Issuer,
     CurrencyCode, 
     BANKS,
     ORGANISATIONS,
@@ -27,7 +26,8 @@ const subStore = {
     subsidiaries: ORGANISATIONS.filter(o => o.type === 'SUBSIDIARY')
 };
 
-const interestType = ref<'DISCOUNTED' | 'INTEREST_BEARING'>('DISCOUNTED');
+const interestType = ref<'Discounted' | 'Interest Bearing'>('Discounted');
+
 
 const form = ref({
     organisationId: authStore.user?.organisationId || '',
@@ -84,7 +84,8 @@ const derivedMetrics = computed(() => {
     let roi = 0;
     let profit = 0;
 
-    if (interestType.value === 'DISCOUNTED') {
+    if (interestType.value === 'Discounted') {
+
         // User inputs Face Value and Purchase Price
         if (face > 0 && price > 0 && tenor > 0) {
             profit = face - price;
@@ -107,22 +108,24 @@ const derivedMetrics = computed(() => {
         yieldRate: yieldRate.toFixed(2),
         roi: roi.toFixed(2),
         profit: profit.toFixed(2),
-        derivedFaceValue: interestType.value === 'INTEREST_BEARING' ? face.toFixed(2) : null
+        derivedFaceValue: interestType.value === 'Interest Bearing' ? face.toFixed(2) : null
     };
 });
 
 const handleSubmit = () => {
-    const finalFaceValue = interestType.value === 'INTEREST_BEARING' 
+    const finalFaceValue = interestType.value === 'Interest Bearing' 
         ? derivedMetrics.value.derivedFaceValue 
         : form.value.faceValue;
 
     emit('submit', {
         ...form.value,
         faceValue: finalFaceValue,
+        calculationMethod: interestType.value,
         yieldRate: derivedMetrics.value.yieldRate,
         tenorDays: derivedMetrics.value.tenor
     });
 };
+
 </script>
 
 <template>
@@ -132,17 +135,17 @@ const handleSubmit = () => {
             <div class="inline-flex rounded-md shadow-sm" role="group">
                 <button 
                     type="button" 
-                    @click="interestType = 'DISCOUNTED'"
+                    @click="interestType = 'Discounted'"
                     class="px-4 py-2 text-sm font-medium border border-gray-200 rounded-l-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white"
-                    :class="interestType === 'DISCOUNTED' ? 'bg-gray-100 text-blue-700 dark:bg-gray-700 dark:text-white' : 'bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-400'"
+                    :class="interestType === 'Discounted' ? 'bg-gray-100 text-blue-700 dark:bg-gray-700 dark:text-white' : 'bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-400'"
                 >
                     Discounted (Upfront)
                 </button>
                 <button 
                     type="button" 
-                    @click="interestType = 'INTEREST_BEARING'"
+                    @click="interestType = 'Interest Bearing'"
                     class="px-4 py-2 text-sm font-medium border border-gray-200 rounded-r-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white"
-                    :class="interestType === 'INTEREST_BEARING' ? 'bg-gray-100 text-blue-700 dark:bg-gray-700 dark:text-white' : 'bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-400'"
+                    :class="interestType === 'Interest Bearing' ? 'bg-gray-100 text-blue-700 dark:bg-gray-700 dark:text-white' : 'bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-400'"
                 >
                     Interest Bearing
                 </button>
@@ -190,7 +193,8 @@ const handleSubmit = () => {
                 </select>
             </div>
 
-            <template v-if="interestType === 'DISCOUNTED'">
+            <template v-if="interestType === 'Discounted'">
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Face Value</label>
                     <div class="relative rounded-md shadow-sm">
@@ -347,7 +351,8 @@ const handleSubmit = () => {
                 <div>
                     <span class="block text-[9px] text-gray-500 dark:text-gray-400 uppercase">Profit @ Maturity</span>
                     <span class="block text-[9px] font-bold text-gray-900 dark:text-white">{{ form.currency === 'NGN' ? '₦' : '$' }}{{ Number(derivedMetrics.profit).toLocaleString() }}</span>
-                    <span v-if="interestType === 'INTEREST_BEARING'" class="block text-[9px] text-gray-500 mt-1">
+                    <span v-if="interestType === 'Interest Bearing'" class="block text-[9px] text-gray-500 mt-1">
+
                         Mat. Val: {{ form.currency === 'NGN' ? '₦' : '$' }}{{ Number(derivedMetrics.derivedFaceValue).toLocaleString() }}
                     </span>
                 </div>

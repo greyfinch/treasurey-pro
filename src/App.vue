@@ -109,37 +109,41 @@ const handleLogout = () => {
             <div class="relative" ref="profileDropdownRef">
               <button 
                 @click="isProfileDropdownOpen = !isProfileDropdownOpen"
-                class="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-gray-700 group"
+                class="flex items-center gap-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-gray-700 group"
               >
-                <div class="hidden md:flex flex-col items-end mr-1">
-                  <span class="text-xs font-bold text-gray-900 dark:text-white leading-none mb-0.5">{{ currentUser?.name }}</span>
-                  <span class="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider leading-none">{{ currentUser?.role.replace(/_/g, ' ') }}</span>
-                </div>
-                <div class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-700 dark:text-primary-400 group-hover:bg-primary-200 dark:group-hover:bg-primary-900/50 transition-colors ring-1 ring-primary-200 dark:ring-primary-800">
+                <div class="w-9 h-9 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-700 dark:text-primary-400 group-hover:bg-primary-200 dark:group-hover:bg-primary-900/50 transition-colors ring-1 ring-primary-200 dark:ring-primary-800">
                   <UserCircleIcon class="w-6 h-6" />
                 </div>
               </button>
 
-              <div v-if="isProfileDropdownOpen" class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden py-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                <div class="px-4 py-2 border-b border-gray-50 dark:border-gray-700 md:hidden">
-                  <p class="text-sm font-bold text-gray-900 dark:text-white">{{ currentUser?.name }}</p>
-                  <p class="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">{{ currentUser?.role.replace(/_/g, ' ') }}</p>
+              <div v-if="isProfileDropdownOpen" class="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden py-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                <!-- Dropdown Header: Always visible, shows name/role -->
+                <div class="px-4 py-3 bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-700">
+                  <p class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ currentUser?.name }}</p>
+                  <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mt-0.5">{{ currentUser?.role.replace(/_/g, ' ') }}</p>
                 </div>
-                <button 
-                  @click="toggleTheme"
-                  class="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors border-b border-gray-50 dark:border-gray-700"
-                >
-                  <SunIcon v-if="isDark" class="w-4 h-4" />
-                  <MoonIcon v-else class="w-4 h-4" />
-                  {{ isDark ? 'Light Mode' : 'Dark Mode' }}
-                </button>
-                <button 
-                  @click="confirmLogout"
-                  class="w-full text-left px-4 py-2.5 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 transition-colors"
-                >
-                  <ArrowRightOnRectangleIcon class="w-4 h-4" />
-                  Sign Out
-                </button>
+
+                <div class="py-1">
+                  <button 
+                    @click="toggleTheme"
+                    class="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between transition-colors"
+                  >
+                    <div class="flex items-center gap-2">
+                        <SunIcon v-if="isDark" class="w-4 h-4" />
+                        <MoonIcon v-else class="w-4 h-4" />
+                        <span>Theme</span>
+                    </div>
+                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{{ isDark ? 'Dark' : 'Light' }}</span>
+                  </button>
+                  
+                  <button 
+                    @click="confirmLogout"
+                    class="w-full text-left px-4 py-2.5 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 transition-colors"
+                  >
+                    <ArrowRightOnRectangleIcon class="w-4 h-4" />
+                    Sign Out
+                  </button>
+                </div>
               </div>
             </div>
 

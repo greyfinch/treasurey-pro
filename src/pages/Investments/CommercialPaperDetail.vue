@@ -8,10 +8,7 @@ import {
 import { formatDate, formatCurrency, formatPercentage } from '../../utils/dateHelpers'
 import { 
     ArrowLeftIcon, 
-    BanknotesIcon, 
-    ArrowPathIcon,
     ClockIcon,
-    DocumentCheckIcon,
     ShieldCheckIcon,
     CalendarIcon,
     XMarkIcon

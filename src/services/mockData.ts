@@ -342,6 +342,9 @@ export const CommercialPaperStatus = {
 } as const;
 export type CommercialPaperStatus = typeof CommercialPaperStatus[keyof typeof CommercialPaperStatus];
 
+export type CommercialPaperCalculationMethod = 'Discounted' | 'Interest Bearing';
+
+
 export interface CommercialPaper {
     id: string;
     organisationId: string;
@@ -362,7 +365,9 @@ export interface CommercialPaper {
     counterpartyId: string;
     counterparty: Bank;
     status: CommercialPaperStatus;
+    calculationMethod: CommercialPaperCalculationMethod;
 }
+
 
 export interface CommercialPaperAccrual {
     id: string;
@@ -400,8 +405,10 @@ export const MOCK_COMMERCIAL_PAPERS: CommercialPaper[] = [
         earlyExitPenalty: '1.5',
         counterpartyId: BANKS[1]!.id, // UBA
         counterparty: BANKS[1]!,
-        status: CommercialPaperStatus.ACTIVE
+        status: CommercialPaperStatus.ACTIVE,
+        calculationMethod: 'Discounted'
     },
+
     {
         id: uuidv4(),
         organisationId: 'org-foods',
@@ -420,9 +427,11 @@ export const MOCK_COMMERCIAL_PAPERS: CommercialPaper[] = [
         earlyExitAllowed: false,
         counterpartyId: BANKS[0]!.id, // Zenith
         counterparty: BANKS[0]!,
-        status: CommercialPaperStatus.ACTIVE
+        status: CommercialPaperStatus.ACTIVE,
+        calculationMethod: 'Discounted'
     }
 ];
+
 
 export interface TreasuryBillEvent {
     id: string;
