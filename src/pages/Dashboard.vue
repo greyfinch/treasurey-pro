@@ -8,12 +8,12 @@ import DateFilter from '../components/DateFilter.vue'
 import FilterPanel from '../components/FilterPanel.vue'
 import ExportButtons from '../components/ExportButtons.vue'
 import { mockService } from '../services/mockData'
-import { calculatePortfolioROI } from '../utils/roi'
+import { calculatePortfolioROI, getEffectiveFXRate } from '../utils/roi'
 import { exportToExcel, exportToCSV } from '../utils/export'
 import { formatCurrency } from '../utils/dateHelpers'
 import { ArrowTrendingUpIcon, ArrowPathIcon, BuildingOffice2Icon } from '@heroicons/vue/24/outline'
 import { organisationService } from '../services/organisationService'
-import type { Bond } from '../services/mockData'
+import type { Bond, MoneyMarketFund } from '../services/mockData'
 
 
 const { activeOrganisation } = organisationService
@@ -32,27 +32,29 @@ const maturityDateStart = ref('')
 const maturityDateEnd = ref('')
 const currencies = ref<any[]>([])
 const bonds = ref<Bond[]>([])
+const mmfs = ref<MoneyMarketFund[]>([])
 const taxSettings = ref({ whtRate: 0 })
 
 
 
 onMounted(async () => {
     try {
-        const [invData, bankData, fxData, currData, taxData, bondData] = await Promise.all([
+        const [invData, bankData, fxData, currData, taxData, bondData, mmfData] = await Promise.all([
             mockService.getInvestments(),
             mockService.getBanks(),
             mockService.getFXRates(),
             mockService.getCurrencies(),
             mockService.getTaxSettings(),
-            mockService.getBonds()
+            mockService.getBonds(),
+            mockService.getMMFs()
         ])
         investments.value = invData
-
         banks.value = bankData
         fxRates.value = fxData
         currencies.value = currData
         taxSettings.value = taxData
         bonds.value = bondData
+        mmfs.value = mmfData
 
     } finally {
         loading.value = false
@@ -65,6 +67,12 @@ const scopedInvestments = computed(() => {
     const combined = [...investments.value, ...bonds.value]
     if (activeOrganisation.value.type === 'GROUP') return combined
     return combined.filter(inv => inv.organisationId === activeOrganisation.value?.id)
+})
+
+const scopedMMFs = computed(() => {
+    if (!activeOrganisation.value) return []
+    if (activeOrganisation.value.type === 'GROUP') return mmfs.value
+    return mmfs.value.filter(m => m.organisationId === activeOrganisation.value?.id)
 })
 
 // Normalize data for ROI calculations (convert T-Bills, CP and Bonds to standard principal/dailyRate)
@@ -158,23 +166,32 @@ const currencyBreakdown = computed(() => {
 })
 
 const totalPrincipalBase = computed(() => {
-    return filteredInvestments.value.reduce((acc, inv) => {
+    const regularPrincipal = filteredInvestments.value.reduce((acc, inv) => {
         if (inv.currency === baseCurrency.value) return acc + Number(inv.principal)
         const rate = fxRates.value.find(r => r.fromCurrency === inv.currency && r.toCurrency === baseCurrency.value)?.rate || 1
         return acc + (Number(inv.principal) * rate)
     }, 0)
+    
+    const mmfPrincipal = scopedMMFs.value.reduce((acc, mmf) => {
+        const principal = mmf.costBasis || (mmf.totalUnits * 1.0);
+        if (mmf.currency === baseCurrency.value) return acc + principal
+        const rate = getEffectiveFXRate(mmf.currency, baseCurrency.value, targetDate.value, fxRates.value)?.rate || 1
+        return acc + (principal * rate)
+    }, 0)
+    
+    return regularPrincipal + mmfPrincipal
 })
 
 const totalGrossROIBase = computed(() => {
-    return calculatePortfolioROI(filteredInvestments.value, targetDate.value, baseCurrency.value, fxRates.value, 0).toNumber()
+    return calculatePortfolioROI(filteredInvestments.value, targetDate.value, baseCurrency.value, fxRates.value, 0, scopedMMFs.value).toNumber()
 })
 
 const totalNetROIBase = computed(() => {
-    return calculatePortfolioROI(filteredInvestments.value, targetDate.value, baseCurrency.value, fxRates.value, taxSettings.value.whtRate).toNumber()
+    return calculatePortfolioROI(filteredInvestments.value, targetDate.value, baseCurrency.value, fxRates.value, taxSettings.value.whtRate, scopedMMFs.value).toNumber()
 })
 
 const todayROIBase = computed(() => {
-    return calculatePortfolioROI(filteredInvestments.value, new Date(), baseCurrency.value, fxRates.value, taxSettings.value.whtRate).toNumber()
+    return calculatePortfolioROI(filteredInvestments.value, new Date(), baseCurrency.value, fxRates.value, taxSettings.value.whtRate, scopedMMFs.value).toNumber()
 })
 
 const roiTrend = computed(() => {

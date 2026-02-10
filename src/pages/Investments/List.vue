@@ -17,12 +17,15 @@ import {
     ORGANISATIONS, 
     TreasuryBillStatus, 
     CommercialPaperStatus,
-    type Bond
+    type Bond,
+    type MoneyMarketFund
 } from '../../services/mockData'
 import type { TreasuryBill, CommercialPaper } from '../../services/mockData'
+import MMFTable from '../../components/Investments/MMFTable.vue'
+import MMFForm from '../../components/Investments/MMFForm.vue'
 
 import { formatCurrency } from '../../utils/dateHelpers'
-import { calculatePortfolioROI } from '../../utils/roi'
+import { calculatePortfolioROI, getEffectiveFXRate } from '../../utils/roi'
 import { organisationService } from '../../services/organisationService'
 import { usePermissions } from '../../composables/usePermissions'
 
@@ -33,16 +36,18 @@ const { user, canDo, isGroupScope } = usePermissions()
 
 const loading = ref(true)
 const investments = ref<any[]>([])
+const fxRates = ref<any[]>([])
 const treasuryBills = ref<TreasuryBill[]>([])
 const commercialPapers = ref<CommercialPaper[]>([])
 const bonds = ref<Bond[]>([])
+const mmfs = ref<MoneyMarketFund[]>([])
 
 const banks = ref<any[]>([])
 const bankBalances = ref<any[]>([])
 const targetDate = ref(new Date())
 
 // Navigation
-const activeTab = ref<'deposits' | 'tbills' | 'cp' | 'bonds'>('deposits')
+const activeTab = ref<'deposits' | 'tbills' | 'cp' | 'bonds' | 'mmf'>('deposits')
 
 
 // Filters
@@ -97,6 +102,12 @@ const newCommercialPaper = ref<Partial<CommercialPaper>>({
 const newBond = ref<Partial<Bond>>({
     currency: 'NGN' as any,
     status: 'PENDING_APPROVAL' as any,
+    organisationId: activeOrganisation.value?.id || ''
+})
+
+const newMMF = ref({
+    fundId: '',
+    amount: '',
     organisationId: activeOrganisation.value?.id || ''
 })
 
@@ -204,23 +215,26 @@ onMounted(async () => {
 
 const fetchData = async () => {
     try {
-        const [invData, bankData, currData, taxData, tbillData, cpData, bondData] = await Promise.all([
+        const [invData, bankData, currData, taxData, tbillData, cpData, bondData, mmfData, fxData] = await Promise.all([
             mockService.getInvestments(),
             mockService.getBanks(),
             mockService.getCurrencies(),
             mockService.getTaxSettings(),
             mockService.getTreasuryBills(),
             mockService.getCommercialPapers(),
-            mockService.getBonds()
+            mockService.getBonds(),
+            mockService.getMMFs(),
+            mockService.getFXRates()
         ])
         investments.value = invData
-
         banks.value = bankData
         currencies.value = currData
         taxSettings.value = taxData
         treasuryBills.value = tbillData
         commercialPapers.value = cpData
         bonds.value = bondData
+        mmfs.value = mmfData
+        fxRates.value = fxData
 
     } finally {
         loading.value = false
@@ -238,6 +252,7 @@ const scopedInvestments = computed(() => {
     if (activeTab.value === 'tbills') targetData = treasuryBills.value
     if (activeTab.value === 'cp') targetData = commercialPapers.value
     if (activeTab.value === 'bonds') targetData = bonds.value
+    if (activeTab.value === 'mmf') targetData = mmfs.value
 
 
     if (!isGroupScope.value) {
@@ -325,6 +340,14 @@ const normalizedInvestments = computed(() => {
                 currency: bond.currency
             }
         }
+        if (activeTab.value === 'mmf') {
+            const mmf = inv as MoneyMarketFund
+            return {
+                ...mmf,
+                principal: Number(mmf.costBasis) || 0,
+                dailyRate: 0 // ROI for MMFs is handled differently in utils/roi.ts
+            }
+        }
         return {
             ...inv,
             principal: Number(inv.principal) || 0,
@@ -334,19 +357,41 @@ const normalizedInvestments = computed(() => {
 })
 
 const totalPrincipal = computed(() => {
-    return normalizedInvestments.value.reduce((sum, inv) => sum + inv.principal, 0)
+    const baseCurr = activeOrganisation.value?.baseCurrency || 'NGN'
+    const regularInvestments = activeTab.value === 'mmf' ? [] : normalizedInvestments.value
+    
+    const regularSum = regularInvestments.reduce((sum, inv) => {
+        if (inv.currency === baseCurr) return sum + inv.principal
+        const rate = getEffectiveFXRate(inv.currency, baseCurr, targetDate.value, fxRates.value)?.rate || 1
+        return sum + (inv.principal * rate)
+    }, 0)
+
+    const mmfSum = (activeTab.value === 'mmf' ? mmfs.value : []).reduce((sum, mmf) => {
+        const principal = mmf.costBasis || (mmf.totalUnits * 1.0)
+        if (mmf.currency === baseCurr) return sum + principal
+        const rate = getEffectiveFXRate(mmf.currency, baseCurr, targetDate.value, fxRates.value)?.rate || 1
+        return sum + (principal * rate)
+    }, 0)
+
+    return regularSum + mmfSum
 })
 
 const totalAccruedROI = computed(() => {
-    return calculatePortfolioROI(normalizedInvestments.value, targetDate.value, 'NGN', [], 0).toNumber()
+    const baseCurr = activeOrganisation.value?.baseCurrency || 'NGN'
+    const regularInvestments = activeTab.value === 'mmf' ? [] : normalizedInvestments.value
+    const mmfInvestments = activeTab.value === 'mmf' ? mmfs.value : []
+    return calculatePortfolioROI(regularInvestments, targetDate.value, baseCurr, fxRates.value, 0, mmfInvestments).toNumber()
 })
 
 const totalNetROI = computed(() => {
-    return calculatePortfolioROI(normalizedInvestments.value, targetDate.value, 'NGN', [], taxSettings.value.whtRate).toNumber()
+    const baseCurr = activeOrganisation.value?.baseCurrency || 'NGN'
+    const regularInvestments = activeTab.value === 'mmf' ? [] : normalizedInvestments.value
+    const mmfInvestments = activeTab.value === 'mmf' ? mmfs.value : []
+    return calculatePortfolioROI(regularInvestments, targetDate.value, baseCurr, fxRates.value, taxSettings.value.whtRate, mmfInvestments).toNumber()
 })
 
 const cashLockInMetrics = computed(() => {
-    const totalPrincipalValue = totalPrincipal.value // Use computed total
+    const totalPrincipalValue = totalPrincipal.value 
     const today = dayjs()
     const daysAhead = Math.max(1, Number(liquidDays.value) || 1)
     const nextWeekStart = today.add(1, 'day').startOf('day')
@@ -391,7 +436,6 @@ const clearFilters = () => {
     selectedCurrency.value = ''
     maturityDateStart.value = ''
     maturityDateEnd.value = ''
-    router.replace({ query: { ...route.query, maturityStart: undefined, maturityEnd: undefined, maturityDate: undefined } })
 }
 
 // --- Action Handlers ---
@@ -480,7 +524,23 @@ const handleCreateBond = async (data: any) => {
         isSubmitting.value = false
     }
 }
-
+const handleCreateMMF = async (data: any) => {
+    isSubmitting.value = true
+    try {
+        await mockService.subscribeMMF(data.fundId, data.amount)
+        await fetchData()
+        showModal.value = false
+        newMMF.value = {
+            fundId: '',
+            amount: '',
+            organisationId: newInvestment.value.organisationId
+        }
+    } catch (error) {
+        console.error('Failed to subscribe to MMF:', error)
+    } finally {
+        isSubmitting.value = false
+    }
+}
 
 const handleTerminate = (id: string) => {
     investmentToTerminate.value = id
@@ -572,7 +632,18 @@ const confirmTerminate = async () => {
                     <DocumentTextIcon class="w-5 h-5" />
                     Bonds
                  </button>
-
+                 <button 
+                    @click="activeTab = 'mmf'"
+                    :class="[
+                        'w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200',
+                        activeTab === 'mmf' 
+                            ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 shadow-sm' 
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    ]"
+                 >
+                    <BanknotesIcon class="w-5 h-5" />
+                    MMFs
+                 </button>
             </div>
 
             <div class="lg:col-span-10 space-y-6">
@@ -684,18 +755,21 @@ const confirmTerminate = async () => {
                 </div>
 
                 <!-- Tables -->
-                <div v-if="activeTab === 'tbills'" class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                <div v-if="activeTab === 'tbills'" class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 transition-colors">
                     <TreasuryBillsTable :investments="filteredInvestments" />
                 </div>
 
-                <div v-else-if="activeTab === 'cp'" class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                <div v-else-if="activeTab === 'cp'" class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 transition-colors">
                     <CommercialPaperTable :investments="filteredInvestments" />
                 </div>
 
-                <div v-else-if="activeTab === 'bonds'" class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                <div v-else-if="activeTab === 'bonds'" class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 transition-colors">
                     <BondsTable :investments="filteredInvestments" />
                 </div>
 
+                <div v-else-if="activeTab === 'mmf'" class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 transition-colors">
+                    <MMFTable :mmfs="filteredInvestments" />
+                </div>
 
                 <div v-else class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                     <!-- Main List -->
@@ -736,8 +810,7 @@ const confirmTerminate = async () => {
                     <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4 transition-colors">
                         <div class="flex justify-between items-start mb-4">
                             <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
-                                {{ activeTab === 'tbills' ? 'New Treasury Bill' : (activeTab === 'cp' ? 'New Commercial Paper' : (activeTab === 'bonds' ? 'New Bond Investment' : 'New Investment')) }}
-
+                                {{ activeTab === 'tbills' ? 'New Treasury Bill' : (activeTab === 'cp' ? 'New Commercial Paper' : (activeTab === 'bonds' ? 'New Bond Investment' : (activeTab === 'mmf' ? 'MMF Subscription' : 'New Investment'))) }}
                             </h3>
                             <button @click="showModal = false" class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors">
                                 <XMarkIcon class="h-6 w-6" />
@@ -766,6 +839,13 @@ const confirmTerminate = async () => {
                                 v-model="newBond"
                                 :is-submitting="isSubmitting"
                                 @submit="handleCreateBond"
+                                @cancel="showModal = false"
+                             />
+                        </div>
+                        <div v-else-if="activeTab === 'mmf'">
+                             <MMFForm
+                                :initial-fund-id="newMMF.fundId"
+                                @success="handleCreateMMF"
                                 @cancel="showModal = false"
                              />
                         </div>
@@ -883,17 +963,16 @@ const confirmTerminate = async () => {
                     <div class="bg-gray-50 dark:bg-gray-900/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t dark:border-gray-700 transition-colors">
                         <button 
                             type="button" 
-                            @click="confirmTerminate" 
-                            :disabled="isSubmitting"
                             class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 transition-colors"
+                            :disabled="isSubmitting"
+                            @click="confirmTerminate"
                         >
                             {{ isSubmitting ? 'Terminating...' : 'Terminate' }}
                         </button>
                         <button 
                             type="button" 
-                            @click="showTerminateModal = false" 
-                            :disabled="isSubmitting"
                             class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
+                            @click="showTerminateModal = false"
                         >
                             Cancel
                         </button>
@@ -901,6 +980,5 @@ const confirmTerminate = async () => {
                 </div>
             </div>
         </div>
-
     </div>
 </template>

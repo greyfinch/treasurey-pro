@@ -1,265 +1,28 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { BuildingLibraryIcon } from '@heroicons/vue/24/solid'
-import { Bars3Icon, XMarkIcon, UserCircleIcon, ArrowRightOnRectangleIcon, ExclamationTriangleIcon, SunIcon, MoonIcon } from '@heroicons/vue/24/outline'
-import SubsidiarySwitcher from './components/SubsidiarySwitcher.vue'
-import NotificationBell from './components/NotificationBell.vue'
-import { useTheme } from './composables/useTheme'
-import { organisationService } from './services/organisationService'
-import { mockService } from './services/mockData'
-import type { User } from './services/mockData'
-import { usePermissions } from './composables/usePermissions'
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import AppLayout from './layouts/AppLayout.vue'
+import PublicLayout from './layouts/PublicLayout.vue'
 
-const { canDo } = usePermissions()
-
-const router = useRouter()
 const route = useRoute()
-const isMobileMenuOpen = ref(false)
-const currentUser = ref<User | null>(null)
-const showLogoutModal = ref(false)
-const isProfileDropdownOpen = ref(false)
-const profileDropdownRef = ref<HTMLElement | null>(null)
-const { isDark, toggleTheme } = useTheme()
 
-const isLoginPage = computed(() => route.name === 'Login')
-
-onMounted(async () => {
-  await organisationService.init()
-  currentUser.value = await mockService.getCurrentUser()
-  document.addEventListener('click', handleClickOutside)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
-
-const handleClickOutside = (event: MouseEvent) => {
-  if (profileDropdownRef.value && !profileDropdownRef.value.contains(event.target as Node)) {
-    isProfileDropdownOpen.value = false
+const layout = computed(() => {
+  // If explicitly set to public
+  if (route.meta.layout === 'public') {
+    return PublicLayout
   }
-}
-
-const confirmLogout = () => {
-  showLogoutModal.value = true
-  isProfileDropdownOpen.value = false
-}
-
-const handleLogout = () => {
-  localStorage.removeItem('isAuthenticated')
-  showLogoutModal.value = false
-  router.push('/login')
-}
+  // Login page usually doesn't have a frame layout, or it's self-contained
+  if (route.name === 'Login') {
+    return null
+  }
+  // Default to AppLayout for authenticated/dashboard pages
+  return AppLayout
+})
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-950 font-sans text-gray-900 dark:text-gray-100 transition-colors duration-300">
-    <!-- Navbar -->
-    <nav v-if="!isLoginPage" class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-          <div class="flex">
-            <div class="flex-shrink-0 flex items-center gap-2 cursor-pointer" @click="router.push('/')">
-              <BuildingLibraryIcon class="h-8 w-8 text-primary-600" />
-              <span class="font-bold text-xl tracking-tight text-gray-900 dark:text-white">Treasury<span class="text-primary-600">Pro</span></span>
-            </div>
-            <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-              <router-link 
-                to="/" 
-                class="border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-200 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                active-class="border-primary-500 text-gray-900 dark:text-white"
-              >
-                Dashboard
-              </router-link>
-              <router-link 
-                to="/investments" 
-                class="border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-200 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                active-class="border-primary-500 text-gray-900 dark:text-white"
-              >
-                Investments
-              </router-link>
-              <router-link 
-                v-if="canDo('audit:view')"
-                to="/audit-logs" 
-                class="border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-200 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                active-class="border-primary-500 text-gray-900 dark:text-white"
-              >
-                Audit Logs
-              </router-link>
-              <router-link 
-                to="/reports" 
-                class="border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-200 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                active-class="border-primary-500 text-gray-900 dark:text-white"
-              >
-                Reports
-              </router-link>
-              <router-link 
-                to="/settings" 
-                class="border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-200 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                active-class="border-primary-500 text-gray-900 dark:text-white"
-              >
-                Settings
-              </router-link>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 sm:gap-6">
-            <SubsidiarySwitcher class="hidden lg:block" />
-            
-            <!-- User Profile Dropdown -->
-            <div class="relative" ref="profileDropdownRef">
-              <button 
-                @click="isProfileDropdownOpen = !isProfileDropdownOpen"
-                class="flex items-center gap-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-gray-700 group"
-              >
-                <div class="w-9 h-9 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-700 dark:text-primary-400 group-hover:bg-primary-200 dark:group-hover:bg-primary-900/50 transition-colors ring-1 ring-primary-200 dark:ring-primary-800">
-                  <UserCircleIcon class="w-6 h-6" />
-                </div>
-              </button>
-
-              <div v-if="isProfileDropdownOpen" class="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden py-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                <!-- Dropdown Header: Always visible, shows name/role -->
-                <div class="px-4 py-3 bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-700">
-                  <p class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ currentUser?.name }}</p>
-                  <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mt-0.5">{{ currentUser?.role.replace(/_/g, ' ') }}</p>
-                </div>
-
-                <div class="py-1">
-                  <button 
-                    @click="toggleTheme"
-                    class="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between transition-colors"
-                  >
-                    <div class="flex items-center gap-2">
-                        <SunIcon v-if="isDark" class="w-4 h-4" />
-                        <MoonIcon v-else class="w-4 h-4" />
-                        <span>Theme</span>
-                    </div>
-                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{{ isDark ? 'Dark' : 'Light' }}</span>
-                  </button>
-                  
-                  <button 
-                    @click="confirmLogout"
-                    class="w-full text-left px-4 py-2.5 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 transition-colors"
-                  >
-                    <ArrowRightOnRectangleIcon class="w-4 h-4" />
-                    Sign Out
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <NotificationBell />
-
-            <!-- Mobile menu button -->
-            <div class="flex items-center sm:hidden">
-              <button 
-                @click="isMobileMenuOpen = !isMobileMenuOpen"
-                type="button" 
-                class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500" 
-                aria-controls="mobile-menu" 
-                :aria-expanded="isMobileMenuOpen"
-              >
-                <span class="sr-only">Open main menu</span>
-                <Bars3Icon v-if="!isMobileMenuOpen" class="block h-6 w-6" aria-hidden="true" />
-                <XMarkIcon v-else class="block h-6 w-6" aria-hidden="true" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Mobile menu -->
-      <div class="sm:hidden border-t border-gray-100 dark:border-gray-800" id="mobile-menu" v-show="isMobileMenuOpen">
-        <div class="pt-2 pb-3 space-y-1">
-          <router-link 
-            to="/" 
-            class="border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
-            active-class="bg-primary-50 dark:bg-primary-900/20 border-primary-500 text-primary-700 dark:text-primary-400"
-            @click="isMobileMenuOpen = false"
-          >
-            Dashboard
-          </router-link>
-          <router-link 
-            to="/investments" 
-            class="border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
-            active-class="bg-primary-50 dark:bg-primary-900/20 border-primary-500 text-primary-700 dark:text-primary-400"
-            @click="isMobileMenuOpen = false"
-          >
-            Investments
-          </router-link>
-          <router-link 
-            v-if="canDo('audit:view')" 
-            to="/audit-logs" 
-            class="border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
-            active-class="bg-primary-50 dark:bg-primary-900/20 border-primary-500 text-primary-700 dark:text-primary-400"
-            @click="isMobileMenuOpen = false"
-          >
-            Audit Logs
-          </router-link>
-          <router-link 
-            to="/reports" 
-            class="border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
-            active-class="bg-primary-50 dark:bg-primary-900/20 border-primary-500 text-primary-700 dark:text-primary-400"
-            @click="isMobileMenuOpen = false"
-          >
-            Reports
-          </router-link>
-          <router-link 
-            to="/settings" 
-            class="border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
-            active-class="bg-primary-50 dark:bg-primary-900/20 border-primary-500 text-primary-700 dark:text-primary-400"
-            @click="isMobileMenuOpen = false"
-          >
-            Settings
-          </router-link>
-          <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800 px-4 space-y-4 pb-4">
-             <div>
-                <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 px-1">Active Organisation</p>
-                <SubsidiarySwitcher />
-             </div>
-             <button 
-               @click="confirmLogout"
-               class="w-full bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-4 py-2.5 rounded-lg text-sm font-bold border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center justify-center gap-2"
-             >
-                <ArrowRightOnRectangleIcon class="w-4 h-4" />
-                Sign Out
-            </button>
-          </div>
-        </div>
-      </div>
-    </nav>
-
-    <!-- Logout Confirmation Modal -->
-    <div v-if="showLogoutModal" class="fixed inset-0 z-[60] overflow-y-auto bg-gray-500/75 dark:bg-gray-900/80 flex items-center justify-center p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 border dark:border-gray-700">
-        <div class="p-6 text-center">
-          <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
-            <ExclamationTriangleIcon class="h-6 w-6 text-red-600 dark:text-red-400" aria-hidden="true" />
-          </div>
-          <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Confirm Logout</h3>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Are you sure you want to log out? You will need to sign in again to access your dashboard.</p>
-        </div>
-        <div class="bg-gray-50 dark:bg-gray-900/50 px-6 py-4 flex gap-3">
-          <button 
-            type="button" 
-            class="flex-1 btn-secondary text-sm font-bold py-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600" 
-            @click="showLogoutModal = false"
-          >
-            Cancel
-          </button>
-          <button 
-            type="button" 
-            class="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-700 shadow-sm transition-colors" 
-            @click="handleLogout"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <router-view></router-view>
-    </main>
-  </div>
+  <component :is="layout" v-if="layout">
+    <router-view></router-view>
+  </component>
+  <router-view v-else></router-view>
 </template>

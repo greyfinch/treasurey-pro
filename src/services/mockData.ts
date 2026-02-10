@@ -70,6 +70,55 @@ export const MOCK_CURRENCIES: Currency[] = [
     { code: CurrencyCode.GBP, name: 'British Pound', symbol: '£' }
 ];
 
+export const MMFStatus = {
+    ACTIVE: 'ACTIVE',
+    SUSPENDED: 'SUSPENDED'
+} as const;
+export type MMFStatus = typeof MMFStatus[keyof typeof MMFStatus];
+
+export const MMFTransactionType = {
+    SUBSCRIPTION: 'SUBSCRIPTION',
+    REDEMPTION: 'REDEMPTION'
+} as const;
+export type MMFTransactionType = typeof MMFTransactionType[keyof typeof MMFTransactionType];
+
+export interface MoneyMarketFund {
+    id: string;
+    organisationId: string;
+    subsidiaryId?: string;
+    fundName: string;
+    fundManager: string;
+    currency: CurrencyCode;
+    totalUnits: number;
+    costBasis: number; // Added to simplify aggregations
+    nav: number; // Net Asset Value
+    valuationDate: Date;
+    status: MMFStatus;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface MMFTransaction {
+    id: string;
+    moneyMarketFundId: string;
+    transactionType: MMFTransactionType;
+    units: number;
+    nav: number;
+    amount: number;
+    transactionDate: Date;
+    settlementDate: Date;
+    createdById: string;
+    createdAt: Date;
+}
+
+export interface MMFValuation {
+    id: string;
+    moneyMarketFundId: string;
+    nav: number;
+    valuationDate: Date;
+    createdAt: Date;
+}
+
 export interface FXRate {
     id: string;
     fromCurrency: CurrencyCode;
@@ -757,6 +806,105 @@ const generateInvestments = () => {
 
     return investments;
 };
+
+// --- MMF MOCK DATA ---
+const generateMMFData = () => {
+    const today = dayjs();
+    const mmfs: MoneyMarketFund[] = [];
+    const transactions: MMFTransaction[] = [];
+    const valuations: MMFValuation[] = [];
+
+    // 1. Stanbic IBTC Money Market Fund (NGN)
+    const mmf1Id = 'mmf-stanbic-001';
+    mmfs.push({
+        id: mmf1Id,
+        organisationId: 'org-foods',
+        fundName: 'Stanbic IBTC Money Market Fund',
+        fundManager: 'Stanbic IBTC Asset Management',
+        currency: CurrencyCode.NGN,
+        totalUnits: 5000000,
+        costBasis: 5000000,
+        nav: 1.0542,
+        valuationDate: today.toDate(),
+        status: 'ACTIVE',
+        createdAt: today.subtract(1, 'year').toDate(),
+        updatedAt: today.toDate()
+    });
+
+    // Subscriptions for Stanbic
+    transactions.push({
+        id: uuidv4(),
+        moneyMarketFundId: mmf1Id,
+        transactionType: 'SUBSCRIPTION',
+        units: 5000000,
+        nav: 1.0,
+        amount: 5000000,
+        transactionDate: today.subtract(30, 'day').toDate(),
+        settlementDate: today.subtract(28, 'day').toDate(),
+        createdById: 'user-1',
+        createdAt: today.subtract(30, 'day').toDate()
+    });
+
+    // Valuations for Stanbic (last 7 days)
+    for (let i = 7; i >= 0; i--) {
+        valuations.push({
+            id: uuidv4(),
+            moneyMarketFundId: mmf1Id,
+            nav: 1.05 + (0.001 * (7 - i)),
+            valuationDate: today.subtract(i, 'day').toDate(),
+            createdAt: today.subtract(i, 'day').toDate()
+        });
+    }
+
+    // 2. ARM Discovery Fund (USD)
+    const mmf2Id = 'mmf-arm-002';
+    mmfs.push({
+        id: mmf2Id,
+        organisationId: 'org-transport',
+        fundName: 'ARM Eurobond Fund',
+        fundManager: 'ARM Investment Managers',
+        currency: CurrencyCode.USD,
+        totalUnits: 100000,
+        costBasis: 12000000,
+        nav: 125.45,
+        valuationDate: today.toDate(),
+        status: 'ACTIVE',
+        createdAt: today.subtract(2, 'year').toDate(),
+        updatedAt: today.toDate()
+    });
+
+    // Subscription for ARM
+    transactions.push({
+        id: uuidv4(),
+        moneyMarketFundId: mmf2Id,
+        transactionType: 'SUBSCRIPTION',
+        units: 100000,
+        nav: 120.0,
+        amount: 12000000,
+        transactionDate: today.subtract(60, 'day').toDate(),
+        settlementDate: today.subtract(58, 'day').toDate(),
+        createdById: 'user-1',
+        createdAt: today.subtract(60, 'day').toDate()
+    });
+
+    // Valuations for ARM
+    for (let i = 7; i >= 0; i--) {
+        valuations.push({
+            id: uuidv4(),
+            moneyMarketFundId: mmf2Id,
+            nav: 125.0 + (0.15 * (7 - i)),
+            valuationDate: today.subtract(i, 'day').toDate(),
+            createdAt: today.subtract(i, 'day').toDate()
+        });
+    }
+
+    return { mmfs, transactions, valuations };
+};
+
+const mmfData = generateMMFData();
+export const MOCK_MMFS = mmfData.mmfs;
+export const MOCK_MMF_TRANSACTIONS = mmfData.transactions;
+export const MOCK_MMF_VALUATIONS = mmfData.valuations;
 
 // --- Mock Treasury Bills ---
 export const MOCK_TREASURY_BILLS: TreasuryBill[] = [];
@@ -1823,6 +1971,100 @@ export const mockService = {
             setTimeout(() => {
                 resolve(MOCK_BOND_ACCRUALS.filter(a => a.bondId === bondId));
             }, 300);
+        });
+    },
+
+    // --- MMF Management ---
+    getMMFs: async (): Promise<MoneyMarketFund[]> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve([...MOCK_MMFS]);
+            }, 300);
+        });
+    },
+
+    getMMFById: async (id: string): Promise<MoneyMarketFund | undefined> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve(MOCK_MMFS.find(m => m.id === id));
+            }, 200);
+        });
+    },
+
+    getMMFTransactions: async (moneyMarketFundId: string): Promise<MMFTransaction[]> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve(MOCK_MMF_TRANSACTIONS.filter(t => t.moneyMarketFundId === moneyMarketFundId));
+            }, 300);
+        });
+    },
+
+    getMMFValuations: async (moneyMarketFundId: string): Promise<MMFValuation[]> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve(MOCK_MMF_VALUATIONS.filter(v => v.moneyMarketFundId === moneyMarketFundId));
+            }, 300);
+        });
+    },
+
+    subscribeMMF: async (moneyMarketFundId: string, amount: number): Promise<MMFTransaction> => {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                const mmf = MOCK_MMFS.find(m => m.id === moneyMarketFundId);
+                if (!mmf) return reject(new Error('Fund not found'));
+
+                const units = amount / mmf.nav;
+                const newTransaction: MMFTransaction = {
+                    id: uuidv4(),
+                    moneyMarketFundId,
+                    transactionType: 'SUBSCRIPTION',
+                    units: units,
+                    nav: mmf.nav,
+                    amount: amount,
+                    transactionDate: new Date(),
+                    settlementDate: new Date(),
+                    createdById: CURRENT_USER.id,
+                    createdAt: new Date()
+                };
+
+                MOCK_MMF_TRANSACTIONS.push(newTransaction);
+                mmf.totalUnits += units;
+                mmf.updatedAt = new Date();
+
+                logAction('mmf:subscription', newTransaction);
+                resolve(newTransaction);
+            }, 500);
+        });
+    },
+
+    redeemMMF: async (moneyMarketFundId: string, units: number): Promise<MMFTransaction> => {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                const mmf = MOCK_MMFS.find(m => m.id === moneyMarketFundId);
+                if (!mmf) return reject(new Error('Fund not found'));
+                if (mmf.totalUnits < units) return reject(new Error('Insufficient units'));
+
+                const amount = units * mmf.nav;
+                const newTransaction: MMFTransaction = {
+                    id: uuidv4(),
+                    moneyMarketFundId,
+                    transactionType: 'REDEMPTION',
+                    units: units,
+                    nav: mmf.nav,
+                    amount: amount,
+                    transactionDate: new Date(),
+                    settlementDate: new Date(),
+                    createdById: CURRENT_USER.id,
+                    createdAt: new Date()
+                };
+
+                MOCK_MMF_TRANSACTIONS.push(newTransaction);
+                mmf.totalUnits -= units;
+                mmf.updatedAt = new Date();
+
+                logAction('mmf:redemption', newTransaction);
+                resolve(newTransaction);
+            }, 500);
         });
     }
 };

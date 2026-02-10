@@ -13,15 +13,58 @@ const Settings = () => import('../pages/Settings/Settings.vue')
 const AuditLogs = () => import('../pages/AuditLogs.vue')
 const Reports = () => import('../pages/Reports.vue')
 
+// Public Pages
+const Landing = () => import('../pages/Public/Landing.vue')
+const Features = () => import('../pages/Public/Features.vue')
+const Pricing = () => import('../pages/Public/Pricing.vue')
+const About = () => import('../pages/Public/About.vue')
+const Contact = () => import('../pages/Public/Contact.vue')
+
+
 const routes: RouteRecordRaw[] = [
+    // Public Routes
+    {
+        path: '/',
+        name: 'Landing',
+        component: Landing,
+        meta: { layout: 'public', requiresAuth: false }
+    },
+    {
+        path: '/features',
+        name: 'Features',
+        component: Features,
+        meta: { layout: 'public', requiresAuth: false }
+    },
+    {
+        path: '/pricing',
+        name: 'Pricing',
+        component: Pricing,
+        meta: { layout: 'public', requiresAuth: false }
+    },
+    {
+        path: '/about',
+        name: 'About',
+        component: About,
+        meta: { layout: 'public', requiresAuth: false }
+    },
+    {
+        path: '/contact',
+        name: 'Contact',
+        component: Contact,
+        meta: { layout: 'public', requiresAuth: false }
+    },
+
+    // Auth Routes
     {
         path: '/login',
         name: 'Login',
         component: Login,
         meta: { requiresAuth: false }
     },
+
+    // App Routes
     {
-        path: '/',
+        path: '/dashboard',
         name: 'Dashboard',
         component: Dashboard,
         meta: { requiresAuth: true }
@@ -71,6 +114,12 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true }
     },
     {
+        path: '/investments/mmf/:id',
+        name: 'mmf-detail',
+        component: () => import('../pages/Investments/MMFDetail.vue'),
+        meta: { requiresAuth: true }
+    },
+    {
         path: '/investments/bond/:id',
         name: 'BondDetail',
         component: BondDetail,
@@ -93,7 +142,14 @@ const routes: RouteRecordRaw[] = [
 
 const router = createRouter({
     history: createWebHistory(),
-    routes
+    routes,
+    scrollBehavior(_to, _from, savedPosition) {
+        if (savedPosition) {
+            return savedPosition
+        } else {
+            return { top: 0 }
+        }
+    }
 })
 
 // Navigation guard for authentication

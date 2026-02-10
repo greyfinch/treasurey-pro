@@ -160,6 +160,33 @@ export function getEffectiveFXRate(
 }
 
 /**
+ * Calculate ROI for Money Market Funds (MMF)
+ */
+export function calculateMMFROI(fund: any, targetDate: Date | string) {
+    if (!fund) return new Decimal(0);
+    const target = dayjs(targetDate);
+    const valuationDate = dayjs(fund.valuationDate);
+
+    // In a real app, we would look up the NAV at targetDate from history
+    // For mock, we'll use current NAV if targetDate is today, or interpolate/extrapolate
+    let effectiveNav = new Decimal(fund.nav);
+
+    if (target.isBefore(valuationDate, 'day')) {
+        // Simple mock back-calculation: assume 12% annual growth (0.032% daily)
+        const daysBack = valuationDate.diff(target, 'day');
+        effectiveNav = effectiveNav.div(new Decimal(1.00032).pow(daysBack));
+    }
+
+    const currentValue = new Decimal(fund.totalUnits).mul(effectiveNav);
+    // Standard MMFs often maintain 1.0 NAV and pay out interest, 
+    // but this blueprint uses unit growth. 
+    // We assume purchase NAV was 1.0 or use a provided field.
+    const costBasis = fund.costBasis ? new Decimal(fund.costBasis) : new Decimal(fund.totalUnits).mul(1.0);
+
+    return currentValue.minus(costBasis);
+}
+
+/**
  * Calculate Total ROI Across ALL Investments (Portfolio View)
  * If targetCurrency is provided, converts all investment ROIs to that currency.
  * Requires fxRates if targetCurrency is different from investment currencies.
@@ -169,9 +196,10 @@ export function calculatePortfolioROI(
     targetDate: Date | string,
     targetCurrency?: string,
     fxRates: any[] = [],
-    whtRate: number = 0
+    whtRate: number = 0,
+    mmfs: any[] = [] // Optional MMFs
 ) {
-    return investments.reduce((acc, inv) => {
+    const regularInvestmentsROI = investments.reduce((acc, inv) => {
         const roi = calculateInvestmentROI({
             principal: inv.principal,
             dailyRate: inv.dailyRate,
@@ -191,16 +219,31 @@ export function calculatePortfolioROI(
             if (fxRate) {
                 interest = interest.mul(fxRate.rate);
             } else if (inv.currency === 'NGN' && targetCurrency === 'USD') {
-                // Handle reverse if needed (USD -> NGN)
                 const reverseRate = getEffectiveFXRate(targetCurrency, inv.currency, targetDate, fxRates);
-                if (reverseRate) {
-                    interest = interest.div(reverseRate.rate);
-                }
+                if (reverseRate) interest = interest.div(reverseRate.rate);
             }
         }
 
         return acc.plus(interest);
     }, new Decimal(0));
+
+    const mmfsROI = mmfs.reduce((acc, mmf) => {
+        let roi = calculateMMFROI(mmf, targetDate);
+
+        if (targetCurrency && mmf.currency !== targetCurrency) {
+            const fxRate = getEffectiveFXRate(mmf.currency, targetCurrency, targetDate, fxRates);
+            if (fxRate) {
+                roi = roi.mul(fxRate.rate);
+            } else if (mmf.currency === 'NGN' && targetCurrency === 'USD') {
+                const reverseRate = getEffectiveFXRate(targetCurrency, mmf.currency, targetDate, fxRates);
+                if (reverseRate) roi = roi.div(reverseRate.rate);
+            }
+        }
+
+        return acc.plus(roi);
+    }, new Decimal(0));
+
+    return regularInvestmentsROI.plus(mmfsROI);
 }
 
 /**

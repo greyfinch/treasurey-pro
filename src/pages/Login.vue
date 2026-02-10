@@ -18,7 +18,7 @@ const handleLogin = async () => {
     const user = await mockService.login(username.value, password.value)
     if (user) {
       localStorage.setItem('isAuthenticated', 'true')
-      router.push('/')
+      router.push('/dashboard')
     } else {
       error.value = 'Invalid username or password'
     }
