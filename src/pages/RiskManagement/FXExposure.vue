@@ -11,7 +11,7 @@ import {
 } from 'chart.js'
 import { Bar } from 'vue-chartjs'
 import { riskService, type FXExposure, type FXHedgeLink } from '../../services/riskService'
-import { ArrowTrendingUpIcon, ArrowTrendingDownIcon, ShieldCheckIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline'
+import { ShieldCheckIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline'
 
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
