@@ -137,6 +137,33 @@ const routes: RouteRecordRaw[] = [
         name: 'Reports',
         component: Reports,
         meta: { requiresAuth: true }
+    },
+    {
+        path: '/risk',
+        component: () => import('../layouts/RiskLayout.vue'),
+        meta: { requiresAuth: true },
+        children: [
+            {
+                path: 'fx-exposure',
+                name: 'FXExposure',
+                component: () => import('../pages/RiskManagement/FXExposure.vue')
+            },
+            {
+                path: 'fx-forwards',
+                name: 'FXForwards',
+                component: () => import('../pages/RiskManagement/FXForwards.vue')
+            },
+            {
+                path: 'mtm-valuation',
+                name: 'MTMValuation',
+                component: () => import('../pages/RiskManagement/MTMValuation.vue')
+            },
+            {
+                path: 'hedge-coverage',
+                name: 'HedgeCoverage',
+                component: () => import('../pages/RiskManagement/HedgeCoverage.vue')
+            }
+        ]
     }
 ]
 

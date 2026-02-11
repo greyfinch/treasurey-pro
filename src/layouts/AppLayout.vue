@@ -91,6 +91,14 @@ const handleLogout = () => {
                 Reports
               </router-link>
               <router-link 
+                to="/risk/fx-exposure" 
+                class="border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-200 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                active-class="border-primary-500 text-gray-900 dark:text-white"
+                :class="{ 'border-primary-500 text-gray-900 dark:text-white': $route.path.startsWith('/risk') }"
+              >
+                Risk Mgt
+              </router-link>
+              <router-link 
                 to="/settings" 
                 class="border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-200 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
                 active-class="border-primary-500 text-gray-900 dark:text-white"
