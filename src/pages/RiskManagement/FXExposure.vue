@@ -10,7 +10,7 @@ import {
   LinearScale
 } from 'chart.js'
 import { Bar } from 'vue-chartjs'
-import { riskService, type FXExposure, type FXHedgeLink } from '../../services/riskService'
+import { riskService, type FXExposure, type FXHedgeLink, type FXForward } from '../../services/riskService'
 import { ShieldCheckIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline'
 
 // Register ChartJS components
@@ -18,13 +18,17 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 const exposures = ref<FXExposure[]>([])
 const hedges = ref<FXHedgeLink[]>([])
+const forwards = ref<FXForward[]>([])
 const currencies = computed(() => [...new Set(exposures.value.map(e => e.currencyCode))])
 const sensitivityPercent = ref(5)
 
 onMounted(async () => {
   exposures.value = await riskService.getExposures()
   hedges.value = await riskService.getHedges()
+  forwards.value = await riskService.getForwards()
 })
+
+const totalMTM = computed(() => riskService.getTotalPortfolioMTM(forwards.value))
 
 // --- Net Exposure Table Data ---
 const exposureTableData = computed(() => {
@@ -108,7 +112,18 @@ const riskImpact = computed(() => {
           </div>
           <div class="ml-5 w-0 flex-1">
             <dl>
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Risk Impact ({{ sensitivityPercent }}% Move)</dt>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate flex items-center gap-2">
+                <span>Risk Impact</span>
+                <select 
+                  v-model="sensitivityPercent" 
+                  class="ml-2 py-0 pl-2 pr-7 border-0 bg-transparent text-gray-500 dark:text-gray-400 text-xs font-medium focus:ring-0 cursor-pointer hover:text-gray-700 dark:hover:text-gray-200"
+                >
+                  <option :value="1">1% Move</option>
+                  <option :value="5">5% Move</option>
+                  <option :value="10">10% Move</option>
+                  <option :value="20">20% Move</option>
+                </select>
+              </dt>
               <dd class="flex items-baseline">
                 <div class="text-2xl font-semibold text-gray-900 dark:text-white">
                     {{ new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(riskImpact) }}
@@ -131,6 +146,27 @@ const riskImpact = computed(() => {
                <dd class="flex items-baseline">
                 <div class="text-2xl font-semibold text-gray-900 dark:text-white">
                     {{  exposureTableData.find(e => e.currency === 'USD')?.hedgeRatio.toFixed(1) || 0 }}%
+                </div>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+
+       <!-- Total Portfolio MTM Card -->
+      <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg px-4 py-5 sm:p-6">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 bg-blue-100 dark:bg-blue-900/20 rounded-md p-3">
+            <svg class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+            </svg>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+             <dl>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Portfolio MTM</dt>
+               <dd class="flex items-baseline">
+                <div class="text-2xl font-semibold" :class="totalMTM >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+                    {{ new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(totalMTM) }}
                 </div>
               </dd>
             </dl>
