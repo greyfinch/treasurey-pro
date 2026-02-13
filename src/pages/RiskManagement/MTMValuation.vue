@@ -13,8 +13,7 @@ import {
 } from 'chart.js'
 import { Line } from 'vue-chartjs'
 import { valuationService, type PortfolioValuationSummary } from '../../services/valuationService'
-import { 
-    PresentationChartLineIcon, 
+import {  
     CurrencyDollarIcon, 
     ArrowTrendingUpIcon, 
     ArrowTrendingDownIcon 
@@ -64,7 +63,7 @@ const chartOptions = {
   plugins: {
     legend: { display: false },
     tooltip: {
-      mode: 'index',
+      mode: 'index' as const,
       intersect: false,
     }
   },
@@ -80,8 +79,8 @@ const chartOptions = {
     }
   },
   interaction: {
-      mode: 'nearest',
-      axis: 'x',
+      mode: 'nearest' as const,
+      axis: 'x' as const,
       intersect: false
   }
 }

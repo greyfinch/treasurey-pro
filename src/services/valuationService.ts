@@ -6,7 +6,6 @@ import {
     type TreasuryBill,
     type CommercialPaper,
     type Bond,
-    type CurrencyCode
 } from './mockData'
 
 // --- Data Models ---
@@ -254,12 +253,14 @@ export const valuationService = {
             summary.breakdownByType[s.instrumentType].pl += plBase
 
             // Currency Breakdown
-            if (!summary.breakdownByCurrency[s.currency]) {
-                summary.breakdownByCurrency[s.currency] = { book: 0, market: 0, pl: 0 }
+            let currencyBreakdown = summary.breakdownByCurrency[s.currency]
+            if (!currencyBreakdown) {
+                currencyBreakdown = { book: 0, market: 0, pl: 0 }
+                summary.breakdownByCurrency[s.currency] = currencyBreakdown
             }
-            summary.breakdownByCurrency[s.currency].book += s.bookValue
-            summary.breakdownByCurrency[s.currency].market += s.marketValue
-            summary.breakdownByCurrency[s.currency].pl += s.mtmValue
+            currencyBreakdown.book += s.bookValue
+            currencyBreakdown.market += s.marketValue
+            currencyBreakdown.pl += s.mtmValue
         })
 
         return summary
