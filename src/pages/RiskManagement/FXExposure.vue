@@ -34,7 +34,8 @@ const totalMTM = computed(() => riskService.getTotalPortfolioMTM(forwards.value)
 const exposureTableData = computed(() => {
   return currencies.value.map(currency => {
     const net = riskService.getNetExposure(exposures.value, currency)
-    const coverage = riskService.getHedgeCoverage(exposures.value, hedges.value, currency)
+    const coverageData = riskService.getCurrencyCoverage(currency)
+    const coverage = coverageData.coverageRatio * 100
     
     // Simple logic: if negative net exposure (shorts), we want high coverage.
     // If positive (longs), coverage might mean selling forwards.

@@ -75,7 +75,7 @@ const getStatusColor = (status: string) => {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="space-y-6">
      <div class="sm:flex sm:items-center">
       <div class="sm:flex-auto">
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">FX Forwards</h1>

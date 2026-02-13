@@ -4,7 +4,8 @@ import {
   ChartBarIcon, 
   CurrencyDollarIcon, 
   ShieldCheckIcon, 
-  PresentationChartLineIcon 
+  PresentationChartLineIcon,
+  FunnelIcon
 } from '@heroicons/vue/24/outline'
 
 const route = useRoute()
@@ -18,44 +19,59 @@ const navigation = [
 </script>
 
 <template>
-  <div class="flex h-[calc(100vh-64px)]"> <!-- Subtract Topbar Height -->
-    <!-- Sidebar -->
-    <div class="hidden lg:flex lg:flex-col lg:w-64 lg:border-r lg:border-gray-200 dark:lg:border-gray-800 bg-white dark:bg-gray-900">
-      <div class="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-        <div class="px-6 mb-6">
-            <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Risk Modules</h2>
-        </div>
-        <nav class="flex-1 px-4 space-y-1">
-          <router-link 
-            v-for="item in navigation" 
-            :key="item.name" 
-            :to="item.href" 
-            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors"
-            :class="[
-              route.path.startsWith(item.href) 
-                ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400' 
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white'
-            ]"
-          >
-            <component 
-              :is="item.icon" 
-              class="mr-3 flex-shrink-0 h-6 w-6" 
-              :class="[
-                route.path.startsWith(item.href) 
-                  ? 'text-primary-600 dark:text-primary-400' 
-                  : 'text-gray-400 group-hover:text-gray-500 dark:text-gray-500 dark:group-hover:text-gray-300'
-              ]" 
-              aria-hidden="true" 
-            />
-            {{ item.name }}
-          </router-link>
-        </nav>
-      </div>
-    </div>
+  <div class="space-y-6">
+    <!-- Main Layout Container matching Reports.vue style -->
+    <div class="flex flex-col lg:flex-row gap-6 min-h-[80vh]">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="lg:w-64 flex-shrink-0 space-y-6">
+             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden p-2 transition-colors">
+                <nav class="space-y-1">
+                  <router-link 
+                    v-for="item in navigation" 
+                    :key="item.name" 
+                    :to="item.href" 
+                    class="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-lg transition-all"
+                    :class="[
+                      route.path.startsWith(item.href) 
+                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 border border-primary-100 dark:border-primary-800' 
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                    ]"
+                  >
+                    <component 
+                      :is="item.icon" 
+                      class="w-5 h-5"
+                      :class="[
+                         route.path.startsWith(item.href) ? 'text-primary-500' : 'text-gray-400'
+                      ]"
+                    />
+                    {{ item.name }}
+                  </router-link>
+                </nav>
+             </div>
 
-    <!-- Main Content -->
-    <div class="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950 p-6">
-      <router-view></router-view>
+             <!-- Contextual Filters Placeholder -->
+             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 transition-colors">
+                 <div class="flex items-center gap-2 mb-4">
+                        <FunnelIcon class="w-4 h-4 text-primary-500" />
+                        <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider">Risk Parameters</h3>
+                  </div>
+                  <div class="space-y-4">
+                      <p class="text-xs text-gray-500 dark:text-gray-400 italic">
+                          Global risk filters (e.g., Value Date, Counterparty) can be applied here to filter all risk modules.
+                      </p>
+                      <!-- Placeholder functionality -->
+                      <button disabled class="w-full py-2 text-xs font-bold text-gray-300 dark:text-gray-600 cursor-not-allowed border border-dashed border-gray-200 dark:border-gray-700 rounded">
+                          Coming Soon
+                      </button>
+                  </div>
+             </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 space-y-6">
+             <router-view></router-view>
+        </main>
     </div>
   </div>
 </template>

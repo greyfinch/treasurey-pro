@@ -14,7 +14,7 @@ defineProps<{
     <div class="flex justify-between items-start">
       <div>
         <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{{ label }}</p>
-        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">{{ value }}</h3>
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ value }}</h3>
       </div>
       <div v-if="trend" :class="[
         'flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full',
