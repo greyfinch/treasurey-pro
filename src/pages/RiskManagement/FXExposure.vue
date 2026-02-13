@@ -103,7 +103,7 @@ const riskImpact = computed(() => {
     </div>
 
     <!-- Top KPI Cards -->
-    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 mb-8">
       <!-- Risk Sensitivity Card -->
       <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg px-4 py-5 sm:p-6">
         <div class="flex items-center">
